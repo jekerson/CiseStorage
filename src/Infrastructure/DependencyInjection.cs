@@ -43,8 +43,8 @@ namespace Infrastructure
             services.AddSingleton<IJwtProvider, JwtProvider>();
 
             services.AddAuthorization();
-/*            services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
-            services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();*/
+            services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+            services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
 
             return services;
         }
