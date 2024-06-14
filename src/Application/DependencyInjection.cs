@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Application.Abstraction.Behavior;
+using FluentValidation;
+using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +15,13 @@ namespace Application
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             var assembly = typeof(DependencyInjection).Assembly;
+
+            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
+
+            services.AddValidatorsFromAssembly(assembly);
+
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
+
 
             return services;
         }

@@ -25,9 +25,7 @@ namespace Domain.Abstraction
         }
 
         public string Code { get; }
-
         public string Description { get; }
-
         public ErrorType Type { get; }
 
         public static Error Failure(string code, string description) =>
@@ -41,38 +39,41 @@ namespace Domain.Abstraction
 
         public static Error Conflict(string code, string description) =>
             new Error(code, description, ErrorType.Conflict);
-
     }
     public class Result
     {
-        protected Result(bool isSuccess, Error error)
+        protected Result(bool isSuccess, List<Error> errors)
         {
-            if (isSuccess && error != Error.None || !isSuccess && error == Error.None)
+            if (isSuccess && errors.Any() || !isSuccess && !errors.Any())
             {
-                throw new ArgumentException("Invalid error", nameof(error));
+                throw new ArgumentException("Invalid error", nameof(errors));
             }
             IsSuccess = isSuccess;
-            Error = error;
+            Errors = errors;
         }
 
         public bool IsSuccess { get; }
         public bool IsFailure => !IsSuccess;
-        public Error Error { get; }
+        public List<Error> Errors { get; }
 
-        public static Result Success() => new(true, Error.None);
-        public static Result Failure(Error error) => new(false, error);
+        public static Result Success() => new(true, new List<Error> { Error.None });
+        public static Result Failure(Error error) => new(false, new List<Error> { error });
+        public static Result Failure(List<Error> errors) => new(false, errors);
     }
 
     public class Result<T> : Result
     {
-        protected internal Result(bool isSuccess, Error error, T? value = default)
-            : base(isSuccess, error)
+        protected internal Result(bool isSuccess, List<Error> errors, T? value = default)
+            : base(isSuccess, errors)
         {
             Value = value;
         }
 
         public T? Value { get; }
-        public static Result<T> Success(T value) => new(true, Error.None, value);
-        public new static Result<T> Failure(Error error) => new(false, error);
+        public static Result<T> Success(T value) => new(true, new List<Error> { Error.None }, value);
+        public static new Result<T> Failure(Error error) => new(false, new List<Error> { error });
+        public new static Result<T> Failure(List<Error> errors) => new(false, errors);
     }
+
+
 }
