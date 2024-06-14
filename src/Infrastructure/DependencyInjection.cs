@@ -1,8 +1,12 @@
 ﻿using Application.Abstraction.Cache;
 using Application.Abstraction.Messaging;
+using Domain.Repositories.Role_permission;
+using Domain.Repositories.Staff;
 using Infrastructure.Authentication;
 using Infrastructure.Cache;
 using Infrastructure.Data;
+using Infrastructure.Repositories.Role_permission;
+using Infrastructure.Repositories.Staff;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +49,16 @@ namespace Infrastructure
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
             services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+
+
+            //repositories
+            services.AddScoped<IPermissionRepository, PermissionRepository>();
+            services.AddScoped<IRoleRepository, RoleRepository>();
+            services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+            services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+
             return services;
         }
     }
