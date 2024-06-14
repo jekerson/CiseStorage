@@ -1,5 +1,7 @@
-﻿using Application.Abstraction.Messaging;
+﻿using Application.Abstraction.Cache;
+using Application.Abstraction.Messaging;
 using Infrastructure.Authentication;
+using Infrastructure.Cache;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -22,6 +24,8 @@ namespace Infrastructure
             services.AddDbContext<SiceDbContext>(options =>
                 options.UseNpgsql(configuration.GetConnectionString("Database")));
 
+            services.AddMemoryCache();
+            services.AddScoped<ICacheProvider, InMemoryCacheProvider>();
 
             services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
 
@@ -45,7 +49,6 @@ namespace Infrastructure
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
             services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
-
             return services;
         }
     }

@@ -1,12 +1,10 @@
 ﻿using Domain.Abstraction;
-
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Linq;
 namespace API.Extensions
 {
-    using Microsoft.AspNetCore.Http;
-    using Microsoft.AspNetCore.Mvc;
-    using System.Collections.Generic;
-    using System.Linq;
-
     public static class ResultExtensions
     {
         public static IResult ToProblemDetails(this Result result)
