@@ -1,8 +1,4 @@
 ﻿using Domain.Abstraction;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Linq;
 namespace API.Extensions
 {
     public static class ResultExtensions
