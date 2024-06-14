@@ -4,7 +4,7 @@ public partial class UserInfo
 {
     public int Id { get; set; }
 
-    public int? EmployeeId { get; set; }
+    public int EmployeeId { get; set; }
 
     public string Username { get; set; } = null!;
 
@@ -12,7 +12,7 @@ public partial class UserInfo
 
     public string HashedPassword { get; set; } = null!;
 
-    public bool? IsDeleted { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual Employee? Employee { get; set; }
 

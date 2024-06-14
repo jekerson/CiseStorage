@@ -18,11 +18,11 @@ public partial class Employee
 
     public string EmailAddress { get; set; } = null!;
 
-    public int? AddressId { get; set; }
+    public int AddressId { get; set; }
 
-    public int? PositionId { get; set; }
+    public int PositionId { get; set; }
 
-    public bool? IsDeleted { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual Address? Address { get; set; }
 

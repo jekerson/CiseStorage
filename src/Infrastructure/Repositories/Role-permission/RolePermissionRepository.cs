@@ -18,12 +18,7 @@ namespace Infrastructure.Repositories.Role_permission
 
         public async Task<Result<IEnumerable<RolePermission>>> GetAllRolePermissionsAsync()
         {
-            var rolePermissions = await _dbContext.RolePermissions
-                .Include(rp => rp.Role)
-                .Include(rp => rp.Permission)
-                .AsNoTracking()
-                .ToListAsync();
-
+            var rolePermissions = await _dbContext.RolePermissions.AsNoTracking().ToListAsync();
             return Result<IEnumerable<RolePermission>>.Success(rolePermissions);
         }
 
@@ -39,40 +34,23 @@ namespace Infrastructure.Repositories.Role_permission
 
         public async Task<Result<RolePermission>> GetRolePermissionByIdAsync(int id)
         {
-            var rolePermission = await _dbContext.RolePermissions
-                .Include(rp => rp.Role)
-                .Include(rp => rp.Permission)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(rp => rp.Id == id);
-
+            var rolePermission = await _dbContext.RolePermissions.FindAsync(id);
             if (rolePermission == null)
                 return Result<RolePermission>.Failure(RolePermissionErrors.RolePermissionNotFoundById(id));
 
             return Result<RolePermission>.Success(rolePermission);
         }
 
-        public async Task<Result<IEnumerable<Permission>>> GetPermissionsByRoleIdAsync(int roleId)
+        public async Task<Result<IEnumerable<RolePermission>>> GetRolePermissionsByRoleIdAsync(int roleId)
         {
-            var permissions = await _dbContext.RolePermissions
-                .Where(rp => rp.RoleId == roleId)
-                .Include(rp => rp.Permission)
-                .Select(rp => rp.Permission)
-                .AsNoTracking()
-                .ToListAsync();
-
-            return Result<IEnumerable<Permission>>.Success(permissions);
+            var rolePermissions = await _dbContext.RolePermissions.AsNoTracking().Where(rp => rp.RoleId == roleId).ToListAsync();
+            return Result<IEnumerable<RolePermission>>.Success(rolePermissions);
         }
 
-        public async Task<Result<IEnumerable<Role>>> GetRolesByPermissionIdAsync(int permissionId)
+        public async Task<Result<IEnumerable<RolePermission>>> GetRolePermissionsByPermissionIdAsync(int permissionId)
         {
-            var roles = await _dbContext.RolePermissions
-                .Where(rp => rp.PermissionId == permissionId)
-                .Include(rp => rp.Role)
-                .Select(rp => rp.Role)
-                .AsNoTracking()
-                .ToListAsync();
-
-            return Result<IEnumerable<Role>>.Success(roles);
+            var rolePermissions = await _dbContext.RolePermissions.AsNoTracking().Where(rp => rp.PermissionId == permissionId).ToListAsync();
+            return Result<IEnumerable<RolePermission>>.Success(rolePermissions);
         }
 
         public async Task<Result> DeleteRolePermissionAsync(int id)
@@ -91,5 +69,6 @@ namespace Infrastructure.Repositories.Role_permission
             return await _dbContext.RolePermissions.AnyAsync(rp => rp.RoleId == roleId && rp.PermissionId == permissionId);
         }
     }
+
 
 }
