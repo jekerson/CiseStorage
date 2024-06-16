@@ -1,4 +1,6 @@
 ﻿using Application.Abstraction.Behavior;
+using Application.Registration;
+using Application.Services.Password;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,12 +13,15 @@ namespace Application
         {
             var assembly = typeof(DependencyInjection).Assembly;
 
+            services.AddScoped<IPasswordService, PasswordService>();
+
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
 
             services.AddValidatorsFromAssembly(assembly);
 
-            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
+            services.AddValidatorsFromAssembly(typeof(UserRegistrationCommandValidator).Assembly);
 
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
 
             return services;
         }

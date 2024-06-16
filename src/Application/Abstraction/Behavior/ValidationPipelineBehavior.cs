@@ -1,53 +1,65 @@
 ﻿using Domain.Abstraction;
 using FluentValidation;
-using FluentValidation.Results;
 using MediatR;
 
 namespace Application.Abstraction.Behavior
 {
-    internal sealed class ValidationPipelineBehavior<TRequest, TResponse>(
-        IEnumerable<IValidator<TRequest>> validators)
+    public class ValidationPipelineBehavior<TRequest, TResponse>
         : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : class, IRequest<TResponse>
-        where TResponse : Result, new()
+        where TRequest : IRequest<TResponse>
+        where TResponse : Result
     {
+        private readonly IEnumerable<IValidator<TRequest>> _validators;
+
+        public ValidationPipelineBehavior(IEnumerable<IValidator<TRequest>> validators) =>
+            _validators = validators;
+
         public async Task<TResponse> Handle(
             TRequest request,
             RequestHandlerDelegate<TResponse> next,
             CancellationToken cancellationToken)
         {
-            ValidationFailure[] validationFailures = await ValidateAsync(request, cancellationToken);
-
-            if (validationFailures.Length != 0)
+            if (!_validators.Any())
             {
-                var errors = validationFailures
-                    .Select(failure => Error.Validation(failure.PropertyName, failure.ErrorMessage))
-                    .ToList();
+                return await next();
+            }
 
-                return Result.Failure(errors) as TResponse;
+            var errors = _validators
+                .Select(validator => validator.Validate(request))
+                .SelectMany(validationResult => validationResult.Errors)
+                .Where(validationFailure => validationFailure is not null)
+                .Select(failure => new Error(
+                    failure.PropertyName,
+                    failure.ErrorMessage,
+                    ErrorType.Validation))
+                .Distinct()
+                .ToArray();
+
+            if (errors.Any())
+            {
+                return CreateValidationResult<TResponse>(errors);
             }
 
             return await next();
         }
 
-        private async Task<ValidationFailure[]> ValidateAsync(TRequest request, CancellationToken cancellationToken)
+        public static TResult CreateValidationResult<TResult>(Error[] errors)
+            where TResult : Result
         {
-            if (!validators.Any())
+            if (typeof(TResult) == typeof(Result))
             {
-                return Array.Empty<ValidationFailure>();
+                return (Domain.Abstraction.ValidationResult.WithErrors(errors) as TResult)!;
             }
 
-            var context = new ValidationContext<TRequest>(request);
+            object validationResult = typeof(ValidationResult<>)
+                .GetGenericTypeDefinition()
+                .MakeGenericType(typeof(TResult).GenericTypeArguments[0])
+                .GetMethod(nameof(Domain.Abstraction.ValidationResult.WithErrors))!
+                .Invoke(null, new object?[] { errors })!;
 
-            ValidationResult[] validationResults = await Task.WhenAll(
-                validators.Select(validator => validator.ValidateAsync(context, cancellationToken)));
+            return (TResult)validationResult!;
 
-            ValidationFailure[] validationFailures = validationResults
-                .Where(validationResult => !validationResult.IsValid)
-                .SelectMany(validationResult => validationResult.Errors)
-                .ToArray();
-
-            return validationFailures;
         }
     }
+
 }

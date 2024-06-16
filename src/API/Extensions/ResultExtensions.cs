@@ -1,28 +1,36 @@
 ﻿using Domain.Abstraction;
+using Microsoft.AspNetCore.Mvc;
 namespace API.Extensions
 {
     public static class ResultExtensions
     {
-        public static IResult ToProblemDetails(this Result result)
+        public static ActionResult ToProblemDetails(this Result result)
         {
             if (result.IsSuccess)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("Cannot convert a successful result to problem details.");
             }
 
-            var errors = result.Errors.Any() ? result.Errors : new List<Error> { Error.None };
+            var errors = result is IValidationResult validationResult
+                ? validationResult.Errors
+                : new[] { result.Error };
 
-            return Results.Problem(
-                statusCode: GetStatusCode(errors[0].Type),
-                title: GetTitle(errors[0].Type),
-                type: GetType(errors[0].Type),
-                extensions: new Dictionary<string, object?>
-                {
-                { "errors", errors.Select(e => new { e.Code, e.Description, e.Type }).ToArray() }
-                });
+            var problemDetails = new ProblemDetails
+            {
+                Status = GetStatusCode(errors[0].Type),
+                Title = GetTitle(errors[0].Type),
+                Type = GetType(errors[0].Type),
+                Detail = "One or more validation errors occurred.",
+                Extensions = { ["errors"] = errors.Select(e => new { e.Code, e.Description }).ToArray() }
+            };
+
+            return new ObjectResult(problemDetails)
+            {
+                StatusCode = problemDetails.Status
+            };
         }
 
-        static int GetStatusCode(ErrorType errorType) =>
+        private static int GetStatusCode(ErrorType errorType) =>
             errorType switch
             {
                 ErrorType.Validation => StatusCodes.Status400BadRequest,
@@ -31,7 +39,7 @@ namespace API.Extensions
                 _ => StatusCodes.Status500InternalServerError
             };
 
-        static string GetTitle(ErrorType errorType) =>
+        private static string GetTitle(ErrorType errorType) =>
             errorType switch
             {
                 ErrorType.Validation => "Bad Request",
@@ -40,7 +48,7 @@ namespace API.Extensions
                 _ => "Internal Server Error"
             };
 
-        static string GetType(ErrorType errorType) =>
+        private static string GetType(ErrorType errorType) =>
             errorType switch
             {
                 ErrorType.Validation => "https://datatracker.ietf.org/html/rfc7231#section-6.5.1",
@@ -49,5 +57,4 @@ namespace API.Extensions
                 _ => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1"
             };
     }
-
 }

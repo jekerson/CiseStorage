@@ -11,7 +11,7 @@
     {
         public static readonly Error None = new(string.Empty, string.Empty, ErrorType.Failure);
 
-        private Error(string code, string description, ErrorType errorType)
+        public Error(string code, string description, ErrorType errorType)
         {
             Code = code;
             Description = description;
@@ -19,7 +19,9 @@
         }
 
         public string Code { get; }
+
         public string Description { get; }
+
         public ErrorType Type { get; }
 
         public static Error Failure(string code, string description) =>
@@ -33,41 +35,40 @@
 
         public static Error Conflict(string code, string description) =>
             new Error(code, description, ErrorType.Conflict);
+
     }
+
     public class Result
     {
-        protected Result(bool isSuccess, List<Error> errors)
+        protected Result(bool isSuccess, Error error)
         {
-            if (isSuccess && errors.Any() || !isSuccess && !errors.Any())
+            if (isSuccess && error != Error.None || !isSuccess && error == Error.None)
             {
-                throw new ArgumentException("Invalid error", nameof(errors));
+                throw new ArgumentException("Invalid error", nameof(error));
             }
             IsSuccess = isSuccess;
-            Errors = errors;
+            Error = error;
         }
 
         public bool IsSuccess { get; }
         public bool IsFailure => !IsSuccess;
-        public List<Error> Errors { get; }
+        public Error Error { get; }
 
-        public static Result Success() => new(true, new List<Error> { Error.None });
-        public static Result Failure(Error error) => new(false, new List<Error> { error });
-        public static Result Failure(List<Error> errors) => new(false, errors);
+        public static Result Success() => new(true, Error.None);
+        public static Result Failure(Error error) => new(false, error);
     }
 
     public class Result<T> : Result
     {
-        protected internal Result(bool isSuccess, List<Error> errors, T? value = default)
-            : base(isSuccess, errors)
+        protected internal Result(bool isSuccess, Error error, T? value = default)
+            : base(isSuccess, error)
         {
             Value = value;
         }
 
         public T? Value { get; }
-        public static Result<T> Success(T value) => new(true, new List<Error> { Error.None }, value);
-        public static new Result<T> Failure(Error error) => new(false, new List<Error> { error });
-        public new static Result<T> Failure(List<Error> errors) => new(false, errors);
+        public static Result<T> Success(T value) => new(true, Error.None, value);
+        public new static Result<T> Failure(Error error) => new(false, error);
     }
-
 
 }

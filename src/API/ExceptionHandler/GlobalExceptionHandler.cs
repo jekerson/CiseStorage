@@ -16,6 +16,7 @@ namespace API.ExceptionHandler
             Exception exception,
             CancellationToken cancellationToken)
         {
+
             _logger.LogError(exception, "Exception occurred: {Message}", exception.Message);
 
             var problemDetails = new ProblemDetails
