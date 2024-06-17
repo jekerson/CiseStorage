@@ -8,11 +8,11 @@ public partial class Item
 
     public string Number { get; set; } = null!;
 
-    public DateTime? CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
 
-    public int? CategoryId { get; set; }
+    public int CategoryId { get; set; }
 
-    public bool? IsDeleted { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual ItemCategory? Category { get; set; }
 

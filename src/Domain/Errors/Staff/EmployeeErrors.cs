@@ -1,6 +1,6 @@
 ﻿using Domain.Abstraction;
 
-namespace Domain.Errors
+namespace Domain.Errors.Staff
 {
     public static class EmployeeErrors
     {

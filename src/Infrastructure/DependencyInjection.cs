@@ -1,10 +1,14 @@
 ﻿using Application.Abstraction.Cache;
 using Application.Abstraction.Messaging;
+using Domain.Repositories.Addresses;
+using Domain.Repositories.Item;
 using Domain.Repositories.Role_permission;
 using Domain.Repositories.Staff;
 using Infrastructure.Authentication;
 using Infrastructure.Cache;
 using Infrastructure.Data;
+using Infrastructure.Repositories.Addresses;
+using Infrastructure.Repositories.Items;
 using Infrastructure.Repositories.Role_permission;
 using Infrastructure.Repositories.Staff;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -58,6 +62,11 @@ namespace Infrastructure
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<IRegionRepository, RegionRepository>();
+            services.AddScoped<IAddressRepository, AddressRepository>();
+            services.AddScoped<IItemRepository, ItemRepository>();
+
 
             return services;
         }

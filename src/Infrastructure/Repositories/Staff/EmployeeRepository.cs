@@ -1,6 +1,6 @@
 ﻿using Domain.Abstraction;
 using Domain.Entities;
-using Domain.Errors;
+using Domain.Errors.Staff;
 using Domain.Repositories.Staff;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
