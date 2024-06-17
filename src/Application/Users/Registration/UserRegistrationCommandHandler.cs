@@ -5,7 +5,7 @@ using Domain.Entities;
 using Domain.Repositories.Role_permission;
 using Domain.Repositories.Staff;
 
-namespace Application.Registration
+namespace Application.Users.Registration
 {
     public sealed class UserRegistrationCommandHandler : ICommandHandler<UserRegistrationCommand, UserInfo>
     {

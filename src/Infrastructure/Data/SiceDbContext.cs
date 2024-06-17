@@ -59,6 +59,8 @@ public partial class SiceDbContext : DbContext
 
     public virtual DbSet<UserRole> UserRoles { get; set; }
 
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseNpgsql(_configuration.GetConnectionString("Database"));
 
@@ -629,6 +631,10 @@ public partial class SiceDbContext : DbContext
             entity.HasOne(d => d.Employee).WithMany(p => p.UserInfos)
                 .HasForeignKey(d => d.EmployeeId)
                 .HasConstraintName("user_info_employee_id_fkey");
+            entity.HasMany(u => u.RefreshTokens)
+                .WithOne(rt => rt.UserInfo)
+                .HasForeignKey(rt => rt.UserInfoId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<UserInfoAudit>(entity =>
@@ -691,6 +697,31 @@ public partial class SiceDbContext : DbContext
                 .HasForeignKey(d => d.UserInfoId)
                 .HasConstraintName("user_role_user_info_id_fkey");
         });
+        modelBuilder.Entity<RefreshToken>(builder =>
+        {
+            builder.ToTable("refresh_token");
+            builder.HasIndex(rt => rt.ExpiresAt);
+            builder.HasIndex(rt => rt.Token);
+
+            builder.HasKey(rt => rt.Id);
+
+            builder.Property(rt => rt.Token)
+                .IsRequired()
+                .HasMaxLength(255);
+
+            builder.Property(rt => rt.ExpiresAt)
+                .IsRequired();
+
+            builder.Property(rt => rt.CreatedAt)
+                .IsRequired();
+
+            builder.HasOne(rt => rt.UserInfo)
+                .WithMany()
+                .HasForeignKey(rt => rt.UserInfoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+
 
         OnModelCreatingPartial(modelBuilder);
     }

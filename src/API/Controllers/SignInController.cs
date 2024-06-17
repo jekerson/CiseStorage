@@ -1,5 +1,5 @@
 ﻿using API.Extensions;
-using Application.Registration;
+using Application.Users.Registration;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
