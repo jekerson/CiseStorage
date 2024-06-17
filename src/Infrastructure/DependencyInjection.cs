@@ -1,14 +1,18 @@
 ﻿using Application.Abstraction.Cache;
 using Application.Abstraction.Messaging;
 using Domain.Repositories.Addresses;
+using Domain.Repositories.Audit;
 using Domain.Repositories.Item;
+using Domain.Repositories.Item.Attributes;
 using Domain.Repositories.Role_permission;
 using Domain.Repositories.Staff;
 using Infrastructure.Authentication;
 using Infrastructure.Cache;
 using Infrastructure.Data;
 using Infrastructure.Repositories.Addresses;
+using Infrastructure.Repositories.Audit;
 using Infrastructure.Repositories.Items;
+using Infrastructure.Repositories.Items.Attributes;
 using Infrastructure.Repositories.Role_permission;
 using Infrastructure.Repositories.Staff;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -66,7 +70,20 @@ namespace Infrastructure
             services.AddScoped<IRegionRepository, RegionRepository>();
             services.AddScoped<IAddressRepository, AddressRepository>();
             services.AddScoped<IItemRepository, ItemRepository>();
+            services.AddScoped<IItemCategoryRepository, ItemCategoryRepository>();
+            services.AddScoped<IItemResponsibilityRepository, ItemResponsibilityRepository>();
+            services.AddScoped<IAttributeCategoryRepository, AttributeCategoryRepository>();
+            services.AddScoped<IAttributeRepository, AttributeRepository>();
+            services.AddScoped<IAttributeUnitRepository, AttributeUnitRepository>();
+            services.AddScoped<IAttributeValueTypeRepository, AttributeValueTypeRepository>();
+            services.AddScoped<IItemAttributeValueRepository, ItemAttributeValueRepository>();
+            services.AddScoped<IItemCategoryAttributeRepository, ItemCategoryAttributeRepository>();
+            services.AddScoped<IUnitCategoryRepository, UnitCategoryRepository>();
 
+            services.AddScoped<IEmployeeAuditRepository, EmployeeAuditRepository>();
+            services.AddScoped<IItemAuditRepository, ItemAuditRepository>();
+            services.AddScoped<IItemResponsibilityAuditRepository, ItemResponsibilityAuditRepository>();
+            services.AddScoped<IUserAuditRepository, UserAuditRepository>();
 
             return services;
         }
