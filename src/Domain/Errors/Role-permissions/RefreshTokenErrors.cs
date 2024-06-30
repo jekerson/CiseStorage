@@ -18,5 +18,9 @@ namespace Domain.Errors
             Error.NotFound(
                 "RefreshToken.NotFoundByToken",
                 $"Refresh token '{token}' not found.");
+        public static Error TokenInvalid =>
+            Error.Validation(
+                "RefreshToken.InvalidToken",
+                $"The refresh token is invalid or expired.");
     }
 }
