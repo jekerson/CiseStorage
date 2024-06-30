@@ -18,5 +18,10 @@ namespace Domain.Errors.Staff
             Error.NotFound(
                 "User.NotFoundByUsername",
                 $"User with username '{username}' not found.");
+
+        public static Error InvalidCredentials =>
+            Error.Validation(
+                "Auth.InvalidCredentials",
+                "Invalid username or password.");
     }
 }

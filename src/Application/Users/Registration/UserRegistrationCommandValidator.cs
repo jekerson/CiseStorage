@@ -7,8 +7,7 @@ namespace Application.Users.Registration
         public UserRegistrationCommandValidator()
         {
             RuleFor(x => x.EmployeeId)
-                .GreaterThan(0).WithMessage("EmployeeId must be greater than 0.")
-                .WithSeverity(Severity.Warning);
+                .GreaterThan(0).WithMessage("EmployeeId must be greater than 0.");
 
             RuleFor(x => x.Username)
                 .NotEmpty().WithMessage("Username is required.")
