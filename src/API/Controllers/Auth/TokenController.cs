@@ -1,23 +1,23 @@
 ﻿using API.Extensions;
-using Application.Users.Authentication;
+using Application.Users.Auth.Refresh;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace API.Controllers
+namespace API.Controllers.Auth
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class SignInController : ControllerBase
+    public class TokenController : ControllerBase
     {
         private readonly IMediator _mediator;
 
-        public SignInController(IMediator mediator)
+        public TokenController(IMediator mediator)
         {
             _mediator = mediator;
         }
 
-        [HttpPost]
-        public async Task<ActionResult> Login([FromBody] UserLoginCommand command)
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand command)
         {
             var result = await _mediator.Send(command);
 

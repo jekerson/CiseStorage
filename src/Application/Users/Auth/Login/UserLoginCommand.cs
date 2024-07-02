@@ -1,6 +1,6 @@
 ﻿using Application.Abstraction.Messaging;
 
-namespace Application.Users.Authentication
+namespace Application.Users.Auth.Login
 {
     public sealed record UserLoginCommand(
         string Username,

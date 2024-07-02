@@ -1,7 +1,7 @@
 ﻿using Application.Abstraction.Messaging;
 using Domain.Entities;
 
-namespace Application.Users.Registration
+namespace Application.Users.Auth.Registration
 {
     public sealed record UserRegistrationCommand(
             int EmployeeId,

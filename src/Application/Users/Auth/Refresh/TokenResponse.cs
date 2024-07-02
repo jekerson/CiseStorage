@@ -1,6 +1,6 @@
-﻿namespace Application.Users.Authentication
+﻿namespace Application.Users.Auth.Refresh
 {
-    public sealed record LoginResponse
+    public sealed record TokenResponse
     {
         public required string AccessToken { get; set; }
         public required string RefreshToken { get; set; }

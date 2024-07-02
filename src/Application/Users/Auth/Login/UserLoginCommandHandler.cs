@@ -6,7 +6,7 @@ using Domain.Errors.Staff;
 using Domain.Repositories.Role_permission;
 using Domain.Repositories.Staff;
 
-namespace Application.Users.Authentication
+namespace Application.Users.Auth.Login
 {
     public sealed class UserLoginCommandHandler : ICommandHandler<UserLoginCommand, LoginResponse>
     {

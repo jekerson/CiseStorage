@@ -1,6 +1,6 @@
 ﻿using Application.Abstraction.Behavior;
 using Application.Services.Password;
-using Application.Users.Registration;
+using Application.Users.Auth.Registration;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;

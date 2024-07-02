@@ -1,7 +1,7 @@
 ﻿using Application.Services.Password;
 using FluentValidation;
 
-namespace Application.Users.Authentication
+namespace Application.Users.Auth.Login
 {
     public class UserLoginCommandValidator : AbstractValidator<UserLoginCommand>
     {

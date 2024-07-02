@@ -1,6 +1,6 @@
 ﻿using Application.Abstraction.Messaging;
 
-namespace Application.Users.Refresh
+namespace Application.Users.Auth.Refresh
 {
     public sealed record RefreshTokenCommand(
         int UserId,

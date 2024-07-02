@@ -4,7 +4,7 @@ using Domain.Errors;
 using Domain.Repositories.Role_permission;
 using Domain.Repositories.Staff;
 
-namespace Application.Users.Refresh
+namespace Application.Users.Auth.Refresh
 {
     public sealed class RefreshTokenCommandHandler : ICommandHandler<RefreshTokenCommand, TokenResponse>
     {

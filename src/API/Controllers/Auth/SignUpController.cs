@@ -1,9 +1,9 @@
 ﻿using API.Extensions;
-using Application.Users.Registration;
+using Application.Users.Auth.Registration;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace API.Controllers
+namespace API.Controllers.Auth
 {
     [Route("api/[controller]")]
     [ApiController]
