@@ -31,6 +31,15 @@ namespace Infrastructure.Repositories.Staff
             return Result<IEnumerable<Employee>>.Success(employees);
         }
 
+        public async Task<Result<IEnumerable<Employee>>> GetAllEmployeesWithPositionAsync()
+        {
+            var employees = await _dbContext.Employees
+                .Include(e => e.Position)
+                .AsNoTracking()
+                .ToListAsync();
+            return Result<IEnumerable<Employee>>.Success(employees);
+        }
+
         public async Task<Result> AddEmployeeAsync(Employee employee)
         {
             if (await IsEmployeeExistByEmailAsync(employee.EmailAddress))
