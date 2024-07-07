@@ -66,6 +66,7 @@ namespace Infrastructure
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+            services.AddScoped<IPositionRepository, PositionRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IRegionRepository, RegionRepository>();
             services.AddScoped<IAddressRepository, AddressRepository>();

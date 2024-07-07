@@ -1,6 +1,19 @@
-﻿namespace Application.DTOs.Employee
+﻿using Application.DTOs.Items.ItemResponsibility;
+
+namespace Application.DTOs.Employee
 {
-    internal class EmployeeWithDetailsDto
-    {
-    }
+    public record EmployeeWithDetailsDto(
+        string Id,
+        string Name,
+        string Surname,
+        string Lastname,
+        string Phone,
+        string Email,
+        string Sex,
+        string Age,
+        string Position,
+        int AddressId,
+        string FullAddress,
+        IEnumerable<ItemResponsibilityWithoutDetails> ItemsResponsibility
+    );
 }
