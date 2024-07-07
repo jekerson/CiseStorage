@@ -1,5 +1,6 @@
 ﻿using Application.Abstraction.Messaging;
 using Application.Abstraction.Pagging;
+using Application.DTOs.Employee;
 
 namespace Application.Employees.Queries.Search.ByTerm
 {
@@ -11,5 +12,5 @@ namespace Application.Employees.Queries.Search.ByTerm
         string? Email,
         int PageNumber,
         PageSizeType PageSize
-    ) : IQuery<SearchEmployeeResponse>;
+    ) : IQuery<PagedResponse<EmployeeWithoutDetailsDto>>;
 }

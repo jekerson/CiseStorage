@@ -1,4 +1,5 @@
 ﻿using Application.Abstraction.Behavior;
+using Application.Services.Audit.Staff;
 using Application.Services.Password;
 using Application.Users.Auth.Registration;
 using FluentValidation;
@@ -14,6 +15,7 @@ namespace Application
             var assembly = typeof(DependencyInjection).Assembly;
 
             services.AddScoped<IPasswordService, PasswordService>();
+            services.AddScoped<IEmployeeAuditService, EmployeeAuditService>();
 
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
 

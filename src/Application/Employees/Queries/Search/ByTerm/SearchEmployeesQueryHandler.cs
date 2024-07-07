@@ -6,7 +6,7 @@ using Domain.Repositories.Staff;
 
 namespace Application.Employees.Queries.Search.ByTerm
 {
-    public sealed class SearchEmployeesQueryHandler : IQueryHandler<SearchEmployeesQuery, SearchEmployeeResponse>
+ public sealed class SearchEmployeesQueryHandler : IQueryHandler<SearchEmployeesQuery, PagedResponse<EmployeeWithoutDetailsDto>>
     {
         private readonly IEmployeeRepository _employeeRepository;
 
@@ -15,12 +15,12 @@ namespace Application.Employees.Queries.Search.ByTerm
             _employeeRepository = employeeRepository;
         }
 
-        public async Task<Result<SearchEmployeeResponse>> Handle(SearchEmployeesQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResponse<EmployeeWithoutDetailsDto>>> Handle(SearchEmployeesQuery request, CancellationToken cancellationToken)
         {
             var employeesResult = await _employeeRepository.GetAllEmployeesWithPositionAsync();
             if (!employeesResult.IsSuccess)
             {
-                return Result<SearchEmployeeResponse>.Failure(employeesResult.Error);
+                return Result<PagedResponse<EmployeeWithoutDetailsDto>>.Failure(employeesResult.Error);
             }
 
             var employees = employeesResult.Value;
@@ -43,14 +43,15 @@ namespace Application.Employees.Queries.Search.ByTerm
                 )).AsQueryable();
 
             var pagedEmployees = PagedList<EmployeeWithoutDetailsDto>.ToPagedList(filteredEmployees, request.PageNumber, request.PageSize);
-            var response = new SearchEmployeeResponse
+            
+            var response = new PagedResponse<EmployeeWithoutDetailsDto>
             {
-                Employees = pagedEmployees,
+                Items = pagedEmployees,
                 TotalPages = pagedEmployees.TotalPages,
                 TotalCount = pagedEmployees.TotalCount
             };
 
-            return Result<SearchEmployeeResponse>.Success(response);
+            return Result<PagedResponse<EmployeeWithoutDetailsDto>>.Success(response);
         }
     }
 }
