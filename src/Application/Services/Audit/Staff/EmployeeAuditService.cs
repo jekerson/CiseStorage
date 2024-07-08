@@ -11,47 +11,52 @@ using Domain.Repositories.Staff;
 
 namespace Application.Services.Audit.Staff
 {
-public class EmployeeAuditService : IEmployeeAuditService
-{
-    private readonly IEmployeeAuditRepository _employeeAuditRepository;
-    private readonly IEmployeeRepository _employeeRepository;
-
-    public EmployeeAuditService(IEmployeeAuditRepository employeeAuditRepository, IEmployeeRepository employeeRepository)
+    public class EmployeeAuditService : IEmployeeAuditService
     {
-        _employeeAuditRepository = employeeAuditRepository;
-        _employeeRepository = employeeRepository;
-    }
+        private readonly IEmployeeAuditRepository _employeeAuditRepository;
+        private readonly IEmployeeRepository _employeeRepository;
+        private readonly IUserRepository _userRepository;
 
-    public async Task<Result> AddEmployeeAuditAsync(ActionType actionType, int changedById, int employeeId)
-    {
-        var employeeResult = await _employeeRepository.GetEmployeeByIdAsync(employeeId);
-        if (!employeeResult.IsSuccess)
-            return Result.Failure(employeeResult.Error);
-
-        var employee = employeeResult.Value;
-
-        var employeeAudit = new EmployeeAudit
+        public EmployeeAuditService(
+             IEmployeeAuditRepository employeeAuditRepository,
+             IEmployeeRepository employeeRepository,
+             IUserRepository userRepository)
         {
-            EmployeeId = employeeId,
-            Name = employee.Name,
-            Surname = employee.Surname,
-            Lastname = employee.Lastname,
-            Sex = employee.Sex,
-            Age = employee.Age,
-            PhoneNumber = employee.PhoneNumber,
-            EmailAddress = employee.EmailAddress,
-            AddressId = employee.AddressId,
-            PositionId = employee.PositionId,
-            ChangedBy = changedById,
-            Action = actionType.GetActionName()
-        };
+            _employeeAuditRepository = employeeAuditRepository;
+            _employeeRepository = employeeRepository;
+            _userRepository = userRepository;
+        }
 
-        return await _employeeAuditRepository.AddEmployeeAuditAsync(employeeAudit);
-    }
+        public async Task<Result> AddEmployeeAuditAsync(ActionType actionType, int changedById, int employeeId)
+        {
+            var employeeResult = await _employeeRepository.GetEmployeeByIdAsync(employeeId);
+            if (!employeeResult.IsSuccess)
+                return Result.Failure(employeeResult.Error);
 
-    public async Task<Result<IEnumerable<EmployeeAudit>>> GetEmployeeAuditHistoryAsync(int employeeId)
-    {
-        return await _employeeAuditRepository.GetEmployeeAuditsByEmployeeIdAsync(employeeId);
+            var employee = employeeResult.Value;
+
+            var employeeAudit = new EmployeeAudit
+            {
+                EmployeeId = employeeId,
+                Name = employee.Name,
+                Surname = employee.Surname,
+                Lastname = employee.Lastname,
+                Sex = employee.Sex,
+                Age = employee.Age,
+                PhoneNumber = employee.PhoneNumber,
+                EmailAddress = employee.EmailAddress,
+                AddressId = employee.AddressId,
+                PositionId = employee.PositionId,
+                ChangedBy = changedById,
+                Action = actionType.GetActionName()
+            };
+
+            return await _employeeAuditRepository.AddEmployeeAuditAsync(employeeAudit);
+        }
+
+        public async Task<Result<IEnumerable<EmployeeAudit>>> GetEmployeeAuditHistoryAsync(int employeeId)
+        {
+            return await _employeeAuditRepository.GetEmployeeAuditsByEmployeeIdAsync(employeeId);
+        }
     }
-}
 }

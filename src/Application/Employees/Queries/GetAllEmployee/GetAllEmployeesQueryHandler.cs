@@ -6,7 +6,7 @@ using Domain.Repositories.Staff;
 
 namespace Application.Employees.Queries.GetAllEmployee
 {
-public sealed class GetAllEmployeesQueryHandler : IQueryHandler<GetAllEmployeesQuery, PagedResponse<EmployeeWithoutDetailsDto>>
+    public sealed class GetAllEmployeesQueryHandler : IQueryHandler<GetAllEmployeesQuery, PagedResponse<EmployeeWithoutDetailsDto>>
     {
         private readonly IEmployeeRepository _employeeRepository;
 

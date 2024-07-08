@@ -7,7 +7,7 @@ namespace Domain.Repositories.Staff
     {
         Task<Result<IEnumerable<Employee>>> GetAllEmployeesAsync();
         Task<Result<IEnumerable<Employee>>> GetAllEmployeesWithPositionAsync();
-        Task<Result> AddEmployeeAsync(Employee employee);
+        Task<Result<int>> AddEmployeeAsync(Employee employee);
         Task<Result<Employee>> GetEmployeeByIdAsync(int id);
         Task<Result<Employee>> GetEmployeeByEmailAsync(string email);
         Task<Result<Employee>> GetEmployeeByPhoneNumberAsync(string phoneNumber);

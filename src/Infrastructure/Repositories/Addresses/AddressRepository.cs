@@ -31,15 +31,15 @@ namespace Infrastructure.Repositories.Addresses
             return Result<IEnumerable<Address>>.Success(addresses);
         }
 
-        public async Task<Result> AddAddressAsync(Address address)
+        public async Task<Result<int>> AddAddressAsync(Address address)
         {
             if (await IsAddressExistAsync(address))
-                return Result.Failure(AddressErrors.AddressAlreadyExist(address));
+                return Result<int>.Failure(AddressErrors.AddressAlreadyExist(address));
 
             await _dbContext.Addresses.AddAsync(address);
             await _dbContext.SaveChangesAsync();
             _cache.Remove(AddressesCacheKey);
-            return Result.Success();
+            return Result<int>.Success(address.Id);
         }
 
         public async Task<Result<Address>> GetAddressByIdAsync(int id)
@@ -97,8 +97,7 @@ namespace Infrastructure.Repositories.Addresses
 
         private async Task<bool> IsAddressExistAsync(Address address)
         {
-            return await _dbContext.Addresses.AnyAsync(a =>
-                a.City == address.City && a.Street == address.Street && a.House == address.House && a.Building == address.Building && a.Apartment == address.Apartment);
+            return await _dbContext.Addresses.AnyAsync(a => a.Id == address.Id);
         }
     }
 }

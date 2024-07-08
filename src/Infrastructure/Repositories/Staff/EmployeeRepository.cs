@@ -40,18 +40,19 @@ namespace Infrastructure.Repositories.Staff
             return Result<IEnumerable<Employee>>.Success(employees);
         }
 
-        public async Task<Result> AddEmployeeAsync(Employee employee)
+        public async Task<Result<int>> AddEmployeeAsync(Employee employee)
         {
             if (await IsEmployeeExistByEmailAsync(employee.EmailAddress))
-                return Result.Failure(EmployeeErrors.EmployeeAlreadyExistByEmail(employee.EmailAddress));
+                return Result<int>.Failure(EmployeeErrors.EmployeeAlreadyExistByEmail(employee.EmailAddress));
 
             if (await IsEmployeeExistByPhoneNumberAsync(employee.PhoneNumber))
-                return Result.Failure(EmployeeErrors.EmployeeAlreadyExistByPhoneNumber(employee.PhoneNumber));
+                return Result<int>.Failure(EmployeeErrors.EmployeeAlreadyExistByPhoneNumber(employee.PhoneNumber));
 
             await _dbContext.Employees.AddAsync(employee);
             await _dbContext.SaveChangesAsync();
             _cache.Remove(EmployeesCacheKey);
-            return Result.Success();
+
+            return Result<int>.Success(employee.Id);
         }
 
         public async Task<Result<Employee>> GetEmployeeByIdAsync(int id)

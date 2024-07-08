@@ -1,5 +1,7 @@
 ﻿using API.Extensions;
 using Application.Abstraction.Pagging;
+using Application.DTOs.Employee;
+using Application.Employees.Commands.AddEmployee;
 using Application.Employees.Queries.GetAllEmployee;
 using Application.Employees.Queries.Search.ById;
 using Application.Employees.Queries.Search.ByTerm;
@@ -57,6 +59,17 @@ namespace API.Controllers
 
             return result.IsSuccess
                 ? Ok(result.Value)
+                : result.ToProblemDetails();
+        }
+
+        [HttpPost("add")]
+        public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeDto employeeDto)
+        {
+            var command = new AddEmployeeCommand(employeeDto);
+            var result = await _mediator.Send(command);
+
+            return result.IsSuccess
+                ? Ok()
                 : result.ToProblemDetails();
         }
     }
