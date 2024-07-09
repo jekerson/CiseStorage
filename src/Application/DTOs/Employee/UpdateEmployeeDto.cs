@@ -13,6 +13,7 @@ namespace Application.DTOs.Employee
         string Phone,
         string Email,
         string Sex,
-        int Age
+        int Age,
+        int UserId
     );
 }

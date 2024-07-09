@@ -2,6 +2,7 @@
 using Application.Abstraction.Pagging;
 using Application.DTOs.Employee;
 using Application.Employees.Commands.AddEmployee;
+using Application.Employees.Commands.UpdateEmployee;
 using Application.Employees.Queries.GetAllEmployee;
 using Application.Employees.Queries.Search.ById;
 using Application.Employees.Queries.Search.ByTerm;
@@ -66,6 +67,17 @@ namespace API.Controllers
         public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeDto employeeDto)
         {
             var command = new AddEmployeeCommand(employeeDto);
+            var result = await _mediator.Send(command);
+
+            return result.IsSuccess
+                ? Ok()
+                : result.ToProblemDetails();
+        }
+
+        [HttpPut("update")]
+        public async Task<IActionResult> UpdateEmployee([FromBody] UpdateEmployeeDto employeeDto)
+        {
+            var command = new UpdateEmployeeCommand(employeeDto);
             var result = await _mediator.Send(command);
 
             return result.IsSuccess

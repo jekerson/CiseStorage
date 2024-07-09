@@ -6,7 +6,7 @@ using Domain.Repositories.Staff;
 
 namespace Application.Employees.Queries.Search.ByTerm
 {
- public sealed class SearchEmployeesQueryHandler : IQueryHandler<SearchEmployeesQuery, PagedResponse<EmployeeWithoutDetailsDto>>
+    public sealed class SearchEmployeesQueryHandler : IQueryHandler<SearchEmployeesQuery, PagedResponse<EmployeeWithoutDetailsDto>>
     {
         private readonly IEmployeeRepository _employeeRepository;
 
@@ -43,7 +43,7 @@ namespace Application.Employees.Queries.Search.ByTerm
                 )).AsQueryable();
 
             var pagedEmployees = PagedList<EmployeeWithoutDetailsDto>.ToPagedList(filteredEmployees, request.PageNumber, request.PageSize);
-            
+
             var response = new PagedResponse<EmployeeWithoutDetailsDto>
             {
                 Items = pagedEmployees,
