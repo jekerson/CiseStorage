@@ -6,6 +6,7 @@ using Application.Employees.Commands.UpdateEmployee;
 using Application.Employees.Queries.GetAllEmployee;
 using Application.Employees.Queries.Search.ById;
 using Application.Employees.Queries.Search.ByTerm;
+using Infrastructure.Authentication;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,7 +23,9 @@ namespace API.Controllers
             _mediator = mediator;
         }
 
+
         [HttpGet]
+        [HasPermission("read_employee")]
         public async Task<IActionResult> GetAllEmployees(
             [FromQuery] int pageNumber = 1,
             [FromQuery] PageSizeType pageSize = PageSizeType.Medium)
@@ -36,6 +39,7 @@ namespace API.Controllers
         }
 
         [HttpGet("{id}")]
+        [HasPermission("read_employee")]
         public async Task<IActionResult> GetEmployeeById(int id)
         {
             var query = new GetEmployeeByIdQuery(id);
@@ -47,6 +51,7 @@ namespace API.Controllers
         }
 
         [HttpGet("search")]
+        [HasPermission("read_employee")]
         public async Task<IActionResult> SearchEmployees(
             [FromQuery] string? name,
             [FromQuery] string? surname,
@@ -64,6 +69,7 @@ namespace API.Controllers
         }
 
         [HttpPost("add")]
+        [HasPermission("write_employee")]
         public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeDto employeeDto)
         {
             var command = new AddEmployeeCommand(employeeDto);
@@ -75,6 +81,7 @@ namespace API.Controllers
         }
 
         [HttpPut("update")]
+        [HasPermission("write_employee")]
         public async Task<IActionResult> UpdateEmployee([FromBody] UpdateEmployeeDto employeeDto)
         {
             var command = new UpdateEmployeeCommand(employeeDto);

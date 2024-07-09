@@ -57,6 +57,7 @@ namespace Infrastructure
             services.AddAuthorization();
             services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
             services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+            services.AddScoped<IPermissionService, PermissionService>();
 
 
             //repositories
