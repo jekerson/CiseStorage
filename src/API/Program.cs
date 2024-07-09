@@ -1,4 +1,5 @@
 using API.ExceptionHandler;
+using API.Middlewares;
 using Application;
 using Infrastructure;
 using Serilog;
@@ -27,6 +28,7 @@ app.UseExceptionHandler();
 app.UseRouting();
 app.MapControllers();
 app.UseAuthentication();
+app.UseSecurityHeaders(); 
 app.UseAuthorization();
 
 app.Run();
