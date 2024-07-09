@@ -5,29 +5,26 @@ namespace Infrastructure.Cache
 {
     public class InMemoryCacheProvider : ICacheProvider
     {
-        private readonly IMemoryCache _memoryCache;
+        private readonly IMemoryCache _cache;
 
-        public InMemoryCacheProvider(IMemoryCache memoryCache)
+        public InMemoryCacheProvider(IMemoryCache cache)
         {
-            _memoryCache = memoryCache;
+            _cache = cache;
         }
 
-        public Task<T?> GetAsync<T>(string key)
+        public async Task<T> GetOrSetAsync<T>(string key, Func<Task<T>> acquire, TimeSpan expiration)
         {
-            _memoryCache.TryGetValue(key, out T value);
-            return Task.FromResult(value);
+            if (!_cache.TryGetValue(key, out T value))
+            {
+                value = await acquire();
+                _cache.Set(key, value, new MemoryCacheEntryOptions().SetSlidingExpiration(expiration));
+            }
+            return value;
         }
 
-        public Task SetAsync<T>(string key, T value, TimeSpan expiration)
+        public void Remove(string key)
         {
-            _memoryCache.Set(key, value, expiration);
-            return Task.CompletedTask;
-        }
 
-        public Task RemoveAsync(string key)
-        {
-            _memoryCache.Remove(key);
-            return Task.CompletedTask;
         }
     }
 }

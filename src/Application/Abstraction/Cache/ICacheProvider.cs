@@ -2,8 +2,7 @@
 {
     public interface ICacheProvider
     {
-        Task<T?> GetAsync<T>(string key);
-        Task SetAsync<T>(string key, T value, TimeSpan expiration);
-        Task RemoveAsync(string key);
+        Task<T> GetOrSetAsync<T>(string key, Func<Task<T>> acquire, TimeSpan expiration);
+        void Remove(string key);
     }
 }
