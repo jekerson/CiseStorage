@@ -2,7 +2,6 @@
 using Application.DTOs.Employee;
 using Application.DTOs.Items.ItemResponsibility;
 using Domain.Abstraction;
-using Domain.Entities;
 using Domain.Repositories.Addresses;
 using Domain.Repositories.Item;
 using Domain.Repositories.Staff;

@@ -1,18 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Application.Abstraction.Messaging;
 using Application.Services.Audit.Staff;
 using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Enum;
 using Domain.Repositories.Addresses;
 using Domain.Repositories.Staff;
-using MediatR;
 
 namespace Application.Employees.Commands.AddEmployee
 {
-public class AddEmployeeCommandHandler : IRequestHandler<AddEmployeeCommand, Result>
+    public class AddEmployeeCommandHandler : ICommandHandler<AddEmployeeCommand>
     {
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IAddressRepository _addressRepository;

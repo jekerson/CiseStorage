@@ -1,6 +1,5 @@
 ﻿using Application.Abstraction.Messaging;
 using Application.DTOs.Employee;
-using Domain.Entities;
 
 namespace Application.Employees.Queries.Search.ById
 {

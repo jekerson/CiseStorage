@@ -1,17 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Application.Abstraction.Messaging;
 using Application.Services.Audit.Staff;
 using Domain.Abstraction;
 using Domain.Enum;
-using Domain.Repositories.Addresses;
 using Domain.Repositories.Staff;
-using MediatR;
 
 namespace Application.Employees.Commands.UpdateEmployee
 {
-    public class UpdateEmployeeCommandHandler : IRequestHandler<UpdateEmployeeCommand, Result>
+    public class UpdateEmployeeCommandHandler : ICommandHandler<UpdateEmployeeCommand>
     {
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IEmployeeAuditService _employeeAuditService;

@@ -2,6 +2,7 @@
 using Application.Abstraction.Pagging;
 using Application.DTOs.Employee;
 using Application.Employees.Commands.AddEmployee;
+using Application.Employees.Commands.DeleteEmployee;
 using Application.Employees.Commands.UpdateEmployee;
 using Application.Employees.Queries.GetAllEmployee;
 using Application.Employees.Queries.Search.ById;
@@ -22,7 +23,6 @@ namespace API.Controllers
         {
             _mediator = mediator;
         }
-
 
         [HttpGet]
         [HasPermission("read_employee")]
@@ -85,6 +85,17 @@ namespace API.Controllers
         public async Task<IActionResult> UpdateEmployee([FromBody] UpdateEmployeeDto employeeDto)
         {
             var command = new UpdateEmployeeCommand(employeeDto);
+            var result = await _mediator.Send(command);
+
+            return result.IsSuccess
+                ? Ok()
+                : result.ToProblemDetails();
+        }
+
+        [HttpDelete("delete")]
+        [HasPermission("write_employee")]
+        public async Task<IActionResult> DeleteEmployee([FromBody] DeleteEmployeeCommand command)
+        {
             var result = await _mediator.Send(command);
 
             return result.IsSuccess

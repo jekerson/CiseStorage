@@ -28,7 +28,7 @@ app.UseExceptionHandler();
 app.UseRouting();
 app.MapControllers();
 app.UseAuthentication();
-app.UseSecurityHeaders(); 
+app.UseSecurityHeaders();
 app.UseAuthorization();
 
 app.Run();
