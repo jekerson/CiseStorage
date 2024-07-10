@@ -25,13 +25,53 @@ namespace Application.Services.Audit.Staff
 
         public async Task<Result> AddEmployeeAuditAsync(ActionType actionType, int changedById, int employeeId)
         {
-            var employeeResult = await _employeeRepository.GetEmployeeByIdAsync(employeeId);
+            var employeeResult = await GetEmployeeResultAsync(actionType, employeeId);
             if (!employeeResult.IsSuccess)
                 return Result.Failure(employeeResult.Error);
 
             var employee = employeeResult.Value;
 
-            var employeeAudit = new EmployeeAudit
+            if (actionType == ActionType.Update && !await HasEmployeeChanged(employeeId, employee))
+                return Result.Success(); // No changes, no audit record needed
+
+            var employeeAudit = CreateEmployeeAudit(actionType, changedById, employeeId, employee);
+            return await _employeeAuditRepository.AddEmployeeAuditAsync(employeeAudit);
+        }
+
+        private async Task<Result<Employee>> GetEmployeeResultAsync(ActionType actionType, int employeeId)
+        {
+            return actionType == ActionType.Delete
+                ? await _employeeRepository.GetDeletedEmployeeByIdAsync(employeeId)
+                : await _employeeRepository.GetEmployeeByIdAsync(employeeId);
+        }
+
+        public async Task<Result<IEnumerable<EmployeeAudit>>> GetEmployeeAuditHistoryAsync(int employeeId)
+        {
+            return await _employeeAuditRepository.GetEmployeeAuditsByEmployeeIdAsync(employeeId);
+        }
+
+        private async Task<bool> HasEmployeeChanged(int employeeId, Employee employee)
+        {
+            var existingAudit = await _employeeAuditRepository.GetEmployeeAuditByIdAsync(employeeId);
+            if (existingAudit.IsSuccess && existingAudit.Value != null)
+            {
+                var lastAudit = existingAudit.Value;
+                return !(lastAudit.Name == employee.Name &&
+                         lastAudit.Surname == employee.Surname &&
+                         lastAudit.Lastname == employee.Lastname &&
+                         lastAudit.Sex == employee.Sex &&
+                         lastAudit.Age == employee.Age &&
+                         lastAudit.PhoneNumber == employee.PhoneNumber &&
+                         lastAudit.EmailAddress == employee.EmailAddress &&
+                         lastAudit.AddressId == employee.AddressId &&
+                         lastAudit.PositionId == employee.PositionId);
+            }
+            return true;
+        }
+
+        private EmployeeAudit CreateEmployeeAudit(ActionType actionType, int changedById, int employeeId, Employee employee)
+        {
+            return new EmployeeAudit
             {
                 EmployeeId = employeeId,
                 Name = employee.Name,
@@ -46,13 +86,6 @@ namespace Application.Services.Audit.Staff
                 ChangedBy = changedById,
                 Action = actionType.GetActionName()
             };
-
-            return await _employeeAuditRepository.AddEmployeeAuditAsync(employeeAudit);
-        }
-
-        public async Task<Result<IEnumerable<EmployeeAudit>>> GetEmployeeAuditHistoryAsync(int employeeId)
-        {
-            return await _employeeAuditRepository.GetEmployeeAuditsByEmployeeIdAsync(employeeId);
         }
     }
 }

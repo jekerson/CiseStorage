@@ -26,11 +26,10 @@ namespace Application.Employees.Commands.DeleteEmployee
                 return Result.Failure(employeeResult.Error);
 
             var employee = employeeResult.Value;
-            employee.IsDeleted = true;
 
-            var updateResult = await _employeeRepository.UpdateEmployeeAsync(employee);
-            if (!updateResult.IsSuccess)
-                return Result.Failure(updateResult.Error);
+            var deleteResult = await _employeeRepository.DeleteEmployeeAsync(employee.Id);
+            if (!deleteResult.IsSuccess)
+                return Result.Failure(deleteResult.Error);
 
             var auditResult = await _employeeAuditService.AddEmployeeAuditAsync(ActionType.Delete, request.UserId, employee.Id);
             if (!auditResult.IsSuccess)
