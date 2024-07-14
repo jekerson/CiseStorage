@@ -1,4 +1,5 @@
 using Application.Abstraction.Messaging;
+using Application.Services.Addresses;
 using Application.Services.Audit.Staff;
 using Domain.Abstraction;
 using Domain.Entities;
@@ -11,23 +12,20 @@ namespace Application.Employees.Commands.AddEmployee
     public class AddEmployeeCommandHandler : ICommandHandler<AddEmployeeCommand>
     {
         private readonly IEmployeeRepository _employeeRepository;
-        private readonly IAddressRepository _addressRepository;
-        private readonly IRegionRepository _regionRepository;
+        private readonly IAddressService _addressService;
         private readonly IPositionRepository _positionRepository;
         private readonly IEmployeeAuditService _employeeAuditService;
         private readonly IUserRepository _userRepository;
 
         public AddEmployeeCommandHandler(
             IEmployeeRepository employeeRepository,
-            IAddressRepository addressRepository,
-            IRegionRepository regionRepository,
+            IAddressService addressService,
             IPositionRepository positionRepository,
             IEmployeeAuditService employeeAuditService,
             IUserRepository userRepository)
         {
             _employeeRepository = employeeRepository;
-            _addressRepository = addressRepository;
-            _regionRepository = regionRepository;
+            _addressService = addressService;
             _positionRepository = positionRepository;
             _employeeAuditService = employeeAuditService;
             _userRepository = userRepository;
@@ -36,7 +34,6 @@ namespace Application.Employees.Commands.AddEmployee
         public async Task<Result> Handle(AddEmployeeCommand request, CancellationToken cancellationToken)
         {
             var employeeDto = request.EmployeeDto;
-
             var userResult = await _userRepository.GetUserByIdAsync(employeeDto.UserId);
             if (!userResult.IsSuccess)
                 return Result.Failure(userResult.Error);
@@ -46,27 +43,11 @@ namespace Application.Employees.Commands.AddEmployee
                 return Result.Failure(positionResult.Error);
 
             var position = positionResult.Value;
-
-            var regionResult = await _regionRepository.GetRegionByNameAsync(employeeDto.AddAddressDto.RegionName);
-            if (!regionResult.IsSuccess)
-                return Result.Failure(regionResult.Error);
-
-            var region = regionResult.Value;
-
-            var address = new Address
-            {
-                City = employeeDto.AddAddressDto.City,
-                Street = employeeDto.AddAddressDto.Street,
-                House = employeeDto.AddAddressDto.House,
-                Building = employeeDto.AddAddressDto.Building,
-                Apartment = employeeDto.AddAddressDto.Apartment,
-                RegionId = region.Id
-            };
-
-            var addressResult = await _addressRepository.AddAddressAsync(address);
+            var addressResult = await _addressService.CreateAddressAsync(employeeDto.AddAddressDto);
             if (!addressResult.IsSuccess)
                 return Result.Failure(addressResult.Error);
 
+            var address = addressResult.Value;
             var employee = new Employee
             {
                 Name = employeeDto.Name,
@@ -84,7 +65,6 @@ namespace Application.Employees.Commands.AddEmployee
             if (!employeeResult.IsSuccess)
                 return Result.Failure(employeeResult.Error);
 
-            // Add audit log
             var auditResult = await _employeeAuditService.AddEmployeeAuditAsync(ActionType.Insert, employeeDto.UserId, employee.Id);
             if (!auditResult.IsSuccess)
                 return Result.Failure(auditResult.Error);
