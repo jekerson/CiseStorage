@@ -32,10 +32,15 @@ namespace Application.Services.Audit.Staff
             var employee = employeeResult.Value;
 
             if (actionType == ActionType.Update && !await HasEmployeeChanged(employeeId, employee))
-                return Result.Success(); // No changes, no audit record needed
+                return Result.Success();
 
             var employeeAudit = CreateEmployeeAudit(actionType, changedById, employeeId, employee);
             return await _employeeAuditRepository.AddEmployeeAuditAsync(employeeAudit);
+        }
+
+        public async Task<Result<IEnumerable<EmployeeAudit>>> GetEmployeeAuditHistoryAsync(int employeeId)
+        {
+            return await _employeeAuditRepository.GetEmployeeAuditsByEmployeeIdAsync(employeeId);
         }
 
         private async Task<Result<Employee>> GetEmployeeResultAsync(ActionType actionType, int employeeId)
@@ -43,11 +48,6 @@ namespace Application.Services.Audit.Staff
             return actionType == ActionType.Delete
                 ? await _employeeRepository.GetDeletedEmployeeByIdAsync(employeeId)
                 : await _employeeRepository.GetEmployeeByIdAsync(employeeId);
-        }
-
-        public async Task<Result<IEnumerable<EmployeeAudit>>> GetEmployeeAuditHistoryAsync(int employeeId)
-        {
-            return await _employeeAuditRepository.GetEmployeeAuditsByEmployeeIdAsync(employeeId);
         }
 
         private async Task<bool> HasEmployeeChanged(int employeeId, Employee employee)

@@ -2,6 +2,8 @@
 using Application.Abstraction.Pagging;
 using Application.DTOs.Employee;
 using Application.Employees.Commands.AddEmployee;
+using Application.Employees.Commands.ChangeAddress;
+using Application.Employees.Commands.ChangePosition;
 using Application.Employees.Commands.DeleteEmployee;
 using Application.Employees.Commands.UpdateEmployee;
 using Application.Employees.Queries.GetAllEmployee;
@@ -101,6 +103,28 @@ namespace API.Controllers
             return result.IsSuccess
                 ? Ok()
                 : result.ToProblemDetails();
+        }
+
+        [HttpPut("update-position")]
+        [HasPermission("write_employee")]
+        public async Task<IActionResult> UpdateEmployeePosition([FromBody] UpdateEmployeePositionCommand command)
+        {
+            var result = await _mediator.Send(command);
+            if (!result.IsSuccess)
+                return BadRequest(result.Error);
+
+            return Ok();
+        }
+
+        [HttpPut("update-address")]
+        [HasPermission("write_employee")]
+        public async Task<IActionResult> UpdateEmployeeAddress([FromBody] UpdateEmployeeAddressCommand command)
+        {
+            var result = await _mediator.Send(command);
+            if (!result.IsSuccess)
+                return BadRequest(result.Error);
+
+            return Ok();
         }
     }
 }
