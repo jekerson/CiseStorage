@@ -76,9 +76,6 @@ namespace Infrastructure.Repositories.Staff
             if (existingPosition == null)
                 return Result.Failure(PositionErrors.PositionNotFoundById(position.Id));
 
-            if (existingPosition.Name != position.Name && await IsPositionExistByNameAsync(position.Name))
-                return Result.Failure(PositionErrors.PositionAlreadyExist(position.Name));
-
             _dbContext.Entry(existingPosition).CurrentValues.SetValues(position);
             await _dbContext.SaveChangesAsync();
             await _cacheProvider.RemoveAsync(PositionsCacheKey);

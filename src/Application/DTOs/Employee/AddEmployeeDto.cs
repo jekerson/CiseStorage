@@ -10,7 +10,7 @@ namespace Application.DTOs.Employee
         string Email,
         string Sex,
         int Age,
-        string PositionName,
+        int PositionId,
         int UserId,
         AddAddressDto AddAddressDto
     );

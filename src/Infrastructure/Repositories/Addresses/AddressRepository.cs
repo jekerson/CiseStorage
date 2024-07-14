@@ -77,9 +77,6 @@ namespace Infrastructure.Repositories.Addresses
             if (existingAddress == null)
                 return Result.Failure(AddressErrors.AddressNotFoundById(address.Id));
 
-            if (await IsAddressExistAsync(address))
-                return Result.Failure(AddressErrors.AddressAlreadyExist(address));
-
             _dbContext.Entry(existingAddress).CurrentValues.SetValues(address);
             await _dbContext.SaveChangesAsync();
             await _cacheProvider.RemoveAsync(AddressesCacheKey);

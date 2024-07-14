@@ -1,4 +1,5 @@
-﻿using Application.Abstraction.Cache;
+﻿using Application.Abstraction;
+using Application.Abstraction.Cache;
 using Application.Abstraction.Messaging;
 using Domain.Repositories.Addresses;
 using Domain.Repositories.Audit;
@@ -59,6 +60,7 @@ namespace Infrastructure
             services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
             services.AddScoped<IPermissionService, PermissionService>();
 
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             //repositories
             services.AddScoped<IPermissionRepository, PermissionRepository>();
