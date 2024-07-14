@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Infrastructure.Repositories.Staff
+namespace Infrastructure.Repositories
 {
     internal class UnitOfWork : IUnitOfWork
     {
