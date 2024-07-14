@@ -3,29 +3,34 @@ using Domain.Entities;
 using Domain.Errors;
 using Domain.Repositories.Role_permission;
 using Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Role_permission
 {
     public class PermissionRepository : IPermissionRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string PermissionsCacheKey = "permissionsCache";
-
-        public PermissionRepository(SiceDbContext dbContext, IMemoryCache cache)
+        private const string PermissionCacheKeyPrefix = "permissionCache_";
+        public PermissionRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<Permission>>> GetAllPermissionsAsync()
         {
-            if (!_cache.TryGetValue(PermissionsCacheKey, out IEnumerable<Permission> permissions))
+            var permissions = await _cacheProvider.GetAsync<IEnumerable<Permission>>(PermissionsCacheKey);
+            if (permissions == null)
             {
                 permissions = await _dbContext.Permissions.AsNoTracking().ToListAsync();
-                _cache.Set(PermissionsCacheKey, permissions, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(PermissionsCacheKey, permissions, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<Permission>>.Success(permissions);
         }
@@ -37,16 +42,22 @@ namespace Infrastructure.Repositories.Role_permission
 
             await _dbContext.Permissions.AddAsync(permission);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(PermissionsCacheKey);
+            await _cacheProvider.RemoveAsync(PermissionsCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<Permission>> GetPermissionByIdAsync(int id)
         {
-            var permission = await _dbContext.Permissions.FindAsync(id);
+            var cacheKey = $"{PermissionCacheKeyPrefix}{id}";
+            var permission = await _cacheProvider.GetAsync<Permission>(cacheKey);
             if (permission == null)
-                return Result<Permission>.Failure(PermissionErrors.PermissionNotFoundById(id));
+            {
+                permission = await _dbContext.Permissions.FindAsync(id);
+                if (permission == null)
+                    return Result<Permission>.Failure(PermissionErrors.PermissionNotFoundById(id));
 
+                await _cacheProvider.SetAsync(cacheKey, permission, TimeSpan.FromHours(1));
+            }
             return Result<Permission>.Success(permission);
         }
 
@@ -70,7 +81,8 @@ namespace Infrastructure.Repositories.Role_permission
 
             _dbContext.Entry(existingPermission).CurrentValues.SetValues(permission);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(PermissionsCacheKey);
+            await _cacheProvider.RemoveAsync(PermissionsCacheKey);
+            await _cacheProvider.RemoveAsync($"{PermissionCacheKeyPrefix}{permission.Id}");
             return Result.Success();
         }
 
@@ -82,8 +94,22 @@ namespace Infrastructure.Repositories.Role_permission
 
             _dbContext.Permissions.Remove(permission);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(PermissionsCacheKey);
+            await _cacheProvider.RemoveAsync(PermissionsCacheKey);
+            await _cacheProvider.RemoveAsync($"{PermissionCacheKeyPrefix}{id}");
             return Result.Success();
+        }
+
+        public async Task<Result<IEnumerable<Permission>>> GetPermissionsByUserIdAsync(int userId)
+        {
+            var permissions =  await _dbContext.UserRoles
+                    .Where(ur => ur.UserInfoId == userId)
+                    .SelectMany(ur => ur.Role.RolePermissions)
+                    .Select(rp => rp.Permission)
+                    .Distinct()
+                    .AsNoTracking()
+                    .ToListAsync();
+                    
+            return Result<IEnumerable<Permission>>.Success(permissions);
         }
 
         private async Task<bool> IsPermissionExistByNameAsync(string name)

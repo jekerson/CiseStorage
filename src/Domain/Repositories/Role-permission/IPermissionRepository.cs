@@ -11,5 +11,6 @@ namespace Domain.Repositories.Role_permission
         Task<Result<Permission>> GetPermissionByNameAsync(string name);
         Task<Result> UpdatePermissionAsync(Permission permission);
         Task<Result> DeletePermissionAsync(int id);
+        Task<Result<IEnumerable<Permission>>> GetPermissionsByUserIdAsync(int userId);
     }
 }

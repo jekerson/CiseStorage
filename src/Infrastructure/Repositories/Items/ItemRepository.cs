@@ -3,30 +3,34 @@ using Domain.Entities;
 using Domain.Errors.Items;
 using Domain.Repositories.Item;
 using Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Items
 {
     public class ItemRepository : IItemRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string ItemsCacheKey = "itemsCache";
         private const string ItemCacheKeyPrefix = "itemCache_";
 
-        public ItemRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public ItemRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
-        public async Task<Result<IEnumerable<Domain.Entities.Item>>> GetAllItemsAsync()
+        public async Task<Result<IEnumerable<Item>>> GetAllItemsAsync()
         {
-            if (!_cache.TryGetValue(ItemsCacheKey, out IEnumerable<Item> items))
+            var items = await _cacheProvider.GetAsync<IEnumerable<Item>>(ItemsCacheKey);
+            if (items == null)
             {
                 items = await _dbContext.Items.AsNoTracking().Where(i => !i.IsDeleted).ToListAsync();
-                _cache.Set(ItemsCacheKey, items, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(ItemsCacheKey, items, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<Item>>.Success(items);
         }
@@ -41,20 +45,21 @@ namespace Infrastructure.Repositories.Items
 
             await _dbContext.Items.AddAsync(item);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemsCacheKey);
+            await _cacheProvider.RemoveAsync(ItemsCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<Item>> GetItemByIdAsync(int id)
         {
             var cacheKey = $"{ItemCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out Item item))
+            var item = await _cacheProvider.GetAsync<Item>(cacheKey);
+            if (item == null)
             {
                 item = await _dbContext.Items.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted);
                 if (item == null)
                     return Result<Item>.Failure(ItemErrors.ItemNotFoundById(id));
 
-                _cache.Set(cacheKey, item, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, item, TimeSpan.FromHours(1));
             }
             return Result<Item>.Success(item);
         }
@@ -91,8 +96,8 @@ namespace Infrastructure.Repositories.Items
 
             _dbContext.Entry(existingItem).CurrentValues.SetValues(item);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemsCacheKey);
-            _cache.Remove($"{ItemCacheKeyPrefix}{item.Id}");
+            await _cacheProvider.RemoveAsync(ItemsCacheKey);
+            await _cacheProvider.RemoveAsync($"{ItemCacheKeyPrefix}{item.Id}");
             return Result.Success();
         }
 
@@ -104,8 +109,8 @@ namespace Infrastructure.Repositories.Items
 
             item.IsDeleted = true;
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemsCacheKey);
-            _cache.Remove($"{ItemCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(ItemsCacheKey);
+            await _cacheProvider.RemoveAsync($"{ItemCacheKeyPrefix}{id}");
             return Result.Success();
         }
 

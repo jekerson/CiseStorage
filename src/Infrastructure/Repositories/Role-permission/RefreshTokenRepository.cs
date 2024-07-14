@@ -3,30 +3,34 @@ using Domain.Entities;
 using Domain.Errors;
 using Domain.Repositories.Role_permission;
 using Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Role_permission
 {
     public class RefreshTokenRepository : IRefreshTokenRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string RefreshTokensCacheKey = "refreshTokensCache";
         private const string RefreshTokenCacheKeyPrefix = "refreshTokenCache_";
 
-        public RefreshTokenRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public RefreshTokenRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<RefreshToken>>> GetAllRefreshTokensAsync()
         {
-            if (!_cache.TryGetValue(RefreshTokensCacheKey, out IEnumerable<RefreshToken> refreshTokens))
+            var refreshTokens = await _cacheProvider.GetAsync<IEnumerable<RefreshToken>>(RefreshTokensCacheKey);
+            if (refreshTokens == null)
             {
                 refreshTokens = await _dbContext.RefreshTokens.AsNoTracking().ToListAsync();
-                _cache.Set(RefreshTokensCacheKey, refreshTokens, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(RefreshTokensCacheKey, refreshTokens, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<RefreshToken>>.Success(refreshTokens);
         }
@@ -38,20 +42,21 @@ namespace Infrastructure.Repositories.Role_permission
 
             await _dbContext.RefreshTokens.AddAsync(refreshToken);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(RefreshTokensCacheKey);
+            await _cacheProvider.RemoveAsync(RefreshTokensCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<RefreshToken>> GetRefreshTokenByIdAsync(int id)
         {
             var cacheKey = $"{RefreshTokenCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out RefreshToken refreshToken))
+            var refreshToken = await _cacheProvider.GetAsync<RefreshToken>(cacheKey);
+            if (refreshToken == null)
             {
                 refreshToken = await _dbContext.RefreshTokens.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
                 if (refreshToken == null)
                     return Result<RefreshToken>.Failure(RefreshTokenErrors.TokenNotFoundById(id));
 
-                _cache.Set(cacheKey, refreshToken, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, refreshToken, TimeSpan.FromHours(1));
             }
             return Result<RefreshToken>.Success(refreshToken);
         }
@@ -76,8 +81,8 @@ namespace Infrastructure.Repositories.Role_permission
 
             _dbContext.Entry(existingToken).CurrentValues.SetValues(refreshToken);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(RefreshTokensCacheKey);
-            _cache.Remove($"{RefreshTokenCacheKeyPrefix}{refreshToken.Id}");
+            await _cacheProvider.RemoveAsync(RefreshTokensCacheKey);
+            await _cacheProvider.RemoveAsync($"{RefreshTokenCacheKeyPrefix}{refreshToken.Id}");
             return Result.Success();
         }
 
@@ -89,8 +94,8 @@ namespace Infrastructure.Repositories.Role_permission
 
             _dbContext.RefreshTokens.Remove(refreshToken);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(RefreshTokensCacheKey);
-            _cache.Remove($"{RefreshTokenCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(RefreshTokensCacheKey);
+            await _cacheProvider.RemoveAsync($"{RefreshTokenCacheKeyPrefix}{id}");
             return Result.Success();
         }
 

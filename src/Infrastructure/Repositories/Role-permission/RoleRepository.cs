@@ -3,29 +3,33 @@ using Domain.Entities;
 using Domain.Errors;
 using Domain.Repositories.Role_permission;
 using Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Role_permission
 {
     public class RoleRepository : IRoleRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string RolesCacheKey = "rolesCache";
 
-        public RoleRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public RoleRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<Role>>> GetAllRolesAsync()
         {
-            if (!_cache.TryGetValue(RolesCacheKey, out IEnumerable<Role> roles))
+            var roles = await _cacheProvider.GetAsync<IEnumerable<Role>>(RolesCacheKey);
+            if (roles == null)
             {
                 roles = await _dbContext.Roles.AsNoTracking().ToListAsync();
-                _cache.Set(RolesCacheKey, roles, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(RolesCacheKey, roles, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<Role>>.Success(roles);
         }
@@ -37,7 +41,7 @@ namespace Infrastructure.Repositories.Role_permission
 
             await _dbContext.Roles.AddAsync(role);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(RolesCacheKey);
+            await _cacheProvider.RemoveAsync(RolesCacheKey);
             return Result.Success();
         }
 
@@ -70,7 +74,7 @@ namespace Infrastructure.Repositories.Role_permission
 
             _dbContext.Entry(existingRole).CurrentValues.SetValues(role);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(RolesCacheKey);
+            await _cacheProvider.RemoveAsync(RolesCacheKey);
             return Result.Success();
         }
 
@@ -82,7 +86,7 @@ namespace Infrastructure.Repositories.Role_permission
 
             _dbContext.Roles.Remove(role);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(RolesCacheKey);
+            await _cacheProvider.RemoveAsync(RolesCacheKey);
             return Result.Success();
         }
 

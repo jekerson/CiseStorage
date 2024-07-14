@@ -27,7 +27,7 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        [HasPermission("read_employee")]
+        //[HasPermission("read_employee")]
         public async Task<IActionResult> GetAllEmployees(
             [FromQuery] int pageNumber = 1,
             [FromQuery] PageSizeType pageSize = PageSizeType.Medium)
@@ -41,7 +41,7 @@ namespace API.Controllers
         }
 
         [HttpGet("{id}")]
-        [HasPermission("read_employee")]
+        //[HasPermission("read_employee")]
         public async Task<IActionResult> GetEmployeeById(int id)
         {
             var query = new GetEmployeeByIdQuery(id);
@@ -53,7 +53,7 @@ namespace API.Controllers
         }
 
         [HttpGet("search")]
-        [HasPermission("read_employee")]
+        //[HasPermission("read_employee")]
         public async Task<IActionResult> SearchEmployees(
             [FromQuery] string? name,
             [FromQuery] string? surname,
@@ -71,7 +71,7 @@ namespace API.Controllers
         }
 
         [HttpPost("add")]
-        [HasPermission("write_employee")]
+        //[HasPermission("write_employee")]
         public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeDto employeeDto)
         {
             var command = new AddEmployeeCommand(employeeDto);
@@ -83,7 +83,7 @@ namespace API.Controllers
         }
 
         [HttpPut("update")]
-        [HasPermission("write_employee")]
+        //[HasPermission("write_employee")]
         public async Task<IActionResult> UpdateEmployee([FromBody] UpdateEmployeeDto employeeDto)
         {
             var command = new UpdateEmployeeCommand(employeeDto);
@@ -95,7 +95,7 @@ namespace API.Controllers
         }
 
         [HttpDelete("delete")]
-        [HasPermission("write_employee")]
+        //[HasPermission("write_employee")]
         public async Task<IActionResult> DeleteEmployee([FromBody] DeleteEmployeeCommand command)
         {
             var result = await _mediator.Send(command);
@@ -106,7 +106,7 @@ namespace API.Controllers
         }
 
         [HttpPut("update-position")]
-        [HasPermission("write_employee")]
+        //[HasPermission("write_employee")]
         public async Task<IActionResult> UpdateEmployeePosition([FromBody] UpdateEmployeePositionCommand command)
         {
             var result = await _mediator.Send(command);
@@ -117,7 +117,7 @@ namespace API.Controllers
         }
 
         [HttpPut("update-address")]
-        [HasPermission("write_employee")]
+        //[HasPermission("write_employee")]
         public async Task<IActionResult> UpdateEmployeeAddress([FromBody] UpdateEmployeeAddressCommand command)
         {
             var result = await _mediator.Send(command);

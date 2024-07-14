@@ -1,32 +1,36 @@
-﻿using Domain.Abstraction;
+﻿using Application.Abstraction.Cache;
+using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Errors.Addresses;
 using Domain.Repositories.Addresses;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories.Addresses
 {
     public class RegionRepository : IRegionRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string RegionsCacheKey = "regionsCache";
         private const string RegionCacheKeyPrefix = "regionCache_";
 
-        public RegionRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public RegionRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<Region>>> GetAllRegionsAsync()
         {
-            if (!_cache.TryGetValue(RegionsCacheKey, out IEnumerable<Region> regions))
+            var regions = await _cacheProvider.GetAsync<IEnumerable<Region>>(RegionsCacheKey);
+            if (regions == null)
             {
                 regions = await _dbContext.Regions.AsNoTracking().ToListAsync();
-                _cache.Set(RegionsCacheKey, regions, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(RegionsCacheKey, regions, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<Region>>.Success(regions);
         }
@@ -38,20 +42,21 @@ namespace Infrastructure.Repositories.Addresses
 
             await _dbContext.Regions.AddAsync(region);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(RegionsCacheKey);
+            await _cacheProvider.RemoveAsync(RegionsCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<Region>> GetRegionByIdAsync(int id)
         {
             var cacheKey = $"{RegionCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out Region region))
+            var region = await _cacheProvider.GetAsync<Region>(cacheKey);
+            if (region == null)
             {
                 region = await _dbContext.Regions.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id);
                 if (region == null)
                     return Result<Region>.Failure(RegionErrors.RegionNotFoundById(id));
 
-                _cache.Set(cacheKey, region, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, region, TimeSpan.FromHours(1));
             }
             return Result<Region>.Success(region);
         }
@@ -76,8 +81,8 @@ namespace Infrastructure.Repositories.Addresses
 
             _dbContext.Entry(existingRegion).CurrentValues.SetValues(region);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(RegionsCacheKey);
-            _cache.Remove($"{RegionCacheKeyPrefix}{region.Id}");
+            await _cacheProvider.RemoveAsync(RegionsCacheKey);
+            await _cacheProvider.RemoveAsync($"{RegionCacheKeyPrefix}{region.Id}");
             return Result.Success();
         }
 
@@ -89,8 +94,8 @@ namespace Infrastructure.Repositories.Addresses
 
             _dbContext.Regions.Remove(region);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(RegionsCacheKey);
-            _cache.Remove($"{RegionCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(RegionsCacheKey);
+            await _cacheProvider.RemoveAsync($"{RegionCacheKeyPrefix}{id}");
             return Result.Success();
         }
 

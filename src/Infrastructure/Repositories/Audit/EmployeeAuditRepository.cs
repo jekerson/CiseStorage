@@ -1,32 +1,36 @@
-﻿using Domain.Abstraction;
+﻿using Application.Abstraction.Cache;
+using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Errors.Audit;
 using Domain.Repositories.Audit;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories.Audit
 {
     public class EmployeeAuditRepository : IEmployeeAuditRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string EmployeeAuditsCacheKey = "employeeAuditsCache";
         private const string EmployeeAuditCacheKeyPrefix = "employeeAuditCache_";
 
-        public EmployeeAuditRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public EmployeeAuditRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<EmployeeAudit>>> GetAllEmployeeAuditsAsync()
         {
-            if (!_cache.TryGetValue(EmployeeAuditsCacheKey, out IEnumerable<EmployeeAudit> employeeAudits))
+            var employeeAudits = await _cacheProvider.GetAsync<IEnumerable<EmployeeAudit>>(EmployeeAuditsCacheKey);
+            if (employeeAudits == null)
             {
                 employeeAudits = await _dbContext.EmployeeAudits.AsNoTracking().ToListAsync();
-                _cache.Set(EmployeeAuditsCacheKey, employeeAudits, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(EmployeeAuditsCacheKey, employeeAudits, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<EmployeeAudit>>.Success(employeeAudits);
         }
@@ -35,20 +39,21 @@ namespace Infrastructure.Repositories.Audit
         {
             await _dbContext.EmployeeAudits.AddAsync(employeeAudit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(EmployeeAuditsCacheKey);
+            await _cacheProvider.RemoveAsync(EmployeeAuditsCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<EmployeeAudit>> GetEmployeeAuditByIdAsync(int id)
         {
             var cacheKey = $"{EmployeeAuditCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out EmployeeAudit employeeAudit))
+            var employeeAudit = await _cacheProvider.GetAsync<EmployeeAudit>(cacheKey);
+            if (employeeAudit == null)
             {
                 employeeAudit = await _dbContext.EmployeeAudits.AsNoTracking().FirstOrDefaultAsync(ea => ea.Id == id);
                 if (employeeAudit == null)
                     return Result<EmployeeAudit>.Failure(EmployeeAuditErrors.EmployeeAuditNotFoundById(id));
 
-                _cache.Set(cacheKey, employeeAudit, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, employeeAudit, TimeSpan.FromHours(1));
             }
             return Result<EmployeeAudit>.Success(employeeAudit);
         }
@@ -67,8 +72,8 @@ namespace Infrastructure.Repositories.Audit
 
             _dbContext.Entry(existingAudit).CurrentValues.SetValues(employeeAudit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(EmployeeAuditsCacheKey);
-            _cache.Remove($"{EmployeeAuditCacheKeyPrefix}{employeeAudit.Id}");
+            await _cacheProvider.RemoveAsync(EmployeeAuditsCacheKey);
+            await _cacheProvider.RemoveAsync($"{EmployeeAuditCacheKeyPrefix}{employeeAudit.Id}");
             return Result.Success();
         }
 
@@ -80,8 +85,8 @@ namespace Infrastructure.Repositories.Audit
 
             _dbContext.EmployeeAudits.Remove(employeeAudit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(EmployeeAuditsCacheKey);
-            _cache.Remove($"{EmployeeAuditCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(EmployeeAuditsCacheKey);
+            await _cacheProvider.RemoveAsync($"{EmployeeAuditCacheKeyPrefix}{id}");
             return Result.Success();
         }
     }

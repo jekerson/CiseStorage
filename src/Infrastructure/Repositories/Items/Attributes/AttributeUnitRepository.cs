@@ -3,30 +3,34 @@ using Domain.Entities;
 using Domain.Errors.Items.Attributes;
 using Domain.Repositories.Item.Attributes;
 using Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Items.Attributes
 {
     public class AttributeUnitRepository : IAttributeUnitRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string AttributeUnitsCacheKey = "attributeUnitsCache";
         private const string AttributeUnitCacheKeyPrefix = "attributeUnitCache_";
 
-        public AttributeUnitRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public AttributeUnitRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<AttributeUnit>>> GetAllAttributeUnitsAsync()
         {
-            if (!_cache.TryGetValue(AttributeUnitsCacheKey, out IEnumerable<AttributeUnit> attributeUnits))
+            var attributeUnits = await _cacheProvider.GetAsync<IEnumerable<AttributeUnit>>(AttributeUnitsCacheKey);
+            if (attributeUnits == null)
             {
                 attributeUnits = await _dbContext.AttributeUnits.AsNoTracking().ToListAsync();
-                _cache.Set(AttributeUnitsCacheKey, attributeUnits, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(AttributeUnitsCacheKey, attributeUnits, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<AttributeUnit>>.Success(attributeUnits);
         }
@@ -41,20 +45,21 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             await _dbContext.AttributeUnits.AddAsync(attributeUnit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(AttributeUnitsCacheKey);
+            await _cacheProvider.RemoveAsync(AttributeUnitsCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<AttributeUnit>> GetAttributeUnitByIdAsync(int id)
         {
             var cacheKey = $"{AttributeUnitCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out AttributeUnit attributeUnit))
+            var attributeUnit = await _cacheProvider.GetAsync<AttributeUnit>(cacheKey);
+            if (attributeUnit == null)
             {
                 attributeUnit = await _dbContext.AttributeUnits.AsNoTracking().FirstOrDefaultAsync(au => au.Id == id);
                 if (attributeUnit == null)
                     return Result<AttributeUnit>.Failure(AttributeUnitErrors.AttributeUnitNotFoundById(id));
 
-                _cache.Set(cacheKey, attributeUnit, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, attributeUnit, TimeSpan.FromHours(1));
             }
             return Result<AttributeUnit>.Success(attributeUnit);
         }
@@ -91,8 +96,8 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             _dbContext.Entry(existingAttributeUnit).CurrentValues.SetValues(attributeUnit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(AttributeUnitsCacheKey);
-            _cache.Remove($"{AttributeUnitCacheKeyPrefix}{attributeUnit.Id}");
+            await _cacheProvider.RemoveAsync(AttributeUnitsCacheKey);
+            await _cacheProvider.RemoveAsync($"{AttributeUnitCacheKeyPrefix}{attributeUnit.Id}");
             return Result.Success();
         }
 
@@ -104,8 +109,8 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             _dbContext.AttributeUnits.Remove(attributeUnit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(AttributeUnitsCacheKey);
-            _cache.Remove($"{AttributeUnitCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(AttributeUnitsCacheKey);
+            await _cacheProvider.RemoveAsync($"{AttributeUnitCacheKeyPrefix}{id}");
             return Result.Success();
         }
 

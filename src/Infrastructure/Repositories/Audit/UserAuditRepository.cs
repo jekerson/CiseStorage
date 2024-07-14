@@ -1,32 +1,36 @@
-﻿using Domain.Abstraction;
+﻿using Application.Abstraction.Cache;
+using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Errors.Audit;
 using Domain.Repositories.Audit;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories.Audit
 {
     public class UserAuditRepository : IUserAuditRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string UserAuditsCacheKey = "userAuditsCache";
         private const string UserAuditCacheKeyPrefix = "userAuditCache_";
 
-        public UserAuditRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public UserAuditRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<UserInfoAudit>>> GetAllUserAuditsAsync()
         {
-            if (!_cache.TryGetValue(UserAuditsCacheKey, out IEnumerable<UserInfoAudit> userAudits))
+            var userAudits = await _cacheProvider.GetAsync<IEnumerable<UserInfoAudit>>(UserAuditsCacheKey);
+            if (userAudits == null)
             {
                 userAudits = await _dbContext.UserInfoAudits.AsNoTracking().ToListAsync();
-                _cache.Set(UserAuditsCacheKey, userAudits, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(UserAuditsCacheKey, userAudits, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<UserInfoAudit>>.Success(userAudits);
         }
@@ -35,20 +39,21 @@ namespace Infrastructure.Repositories.Audit
         {
             await _dbContext.UserInfoAudits.AddAsync(userAudit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(UserAuditsCacheKey);
+            await _cacheProvider.RemoveAsync(UserAuditsCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<UserInfoAudit>> GetUserAuditByIdAsync(int id)
         {
             var cacheKey = $"{UserAuditCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out UserInfoAudit userAudit))
+            var userAudit = await _cacheProvider.GetAsync<UserInfoAudit>(cacheKey);
+            if (userAudit == null)
             {
                 userAudit = await _dbContext.UserInfoAudits.AsNoTracking().FirstOrDefaultAsync(ua => ua.Id == id);
                 if (userAudit == null)
                     return Result<UserInfoAudit>.Failure(UserAuditErrors.UserAuditNotFoundById(id));
 
-                _cache.Set(cacheKey, userAudit, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, userAudit, TimeSpan.FromHours(1));
             }
             return Result<UserInfoAudit>.Success(userAudit);
         }
@@ -73,8 +78,8 @@ namespace Infrastructure.Repositories.Audit
 
             _dbContext.Entry(existingAudit).CurrentValues.SetValues(userAudit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(UserAuditsCacheKey);
-            _cache.Remove($"{UserAuditCacheKeyPrefix}{userAudit.Id}");
+            await _cacheProvider.RemoveAsync(UserAuditsCacheKey);
+            await _cacheProvider.RemoveAsync($"{UserAuditCacheKeyPrefix}{userAudit.Id}");
             return Result.Success();
         }
 
@@ -86,8 +91,8 @@ namespace Infrastructure.Repositories.Audit
 
             _dbContext.UserInfoAudits.Remove(userAudit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(UserAuditsCacheKey);
-            _cache.Remove($"{UserAuditCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(UserAuditsCacheKey);
+            await _cacheProvider.RemoveAsync($"{UserAuditCacheKeyPrefix}{id}");
             return Result.Success();
         }
     }

@@ -1,32 +1,36 @@
-﻿using Domain.Abstraction;
+﻿using Application.Abstraction.Cache;
+using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Errors.Staff;
 using Domain.Repositories.Staff;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories.Staff
 {
     public class PositionRepository : IPositionRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string PositionsCacheKey = "positionsCache";
         private const string PositionCacheKeyPrefix = "positionCache_";
 
-        public PositionRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public PositionRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<Position>>> GetAllPositionsAsync()
         {
-            if (!_cache.TryGetValue(PositionsCacheKey, out IEnumerable<Position> positions))
+            var positions = await _cacheProvider.GetAsync<IEnumerable<Position>>(PositionsCacheKey);
+            if (positions == null)
             {
                 positions = await _dbContext.Positions.AsNoTracking().ToListAsync();
-                _cache.Set(PositionsCacheKey, positions, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(PositionsCacheKey, positions, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<Position>>.Success(positions);
         }
@@ -38,20 +42,21 @@ namespace Infrastructure.Repositories.Staff
 
             await _dbContext.Positions.AddAsync(position);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(PositionsCacheKey);
+            await _cacheProvider.RemoveAsync(PositionsCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<Position>> GetPositionByIdAsync(int id)
         {
             var cacheKey = $"{PositionCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out Position position))
+            var position = await _cacheProvider.GetAsync<Position>(cacheKey);
+            if (position == null)
             {
                 position = await _dbContext.Positions.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
                 if (position == null)
                     return Result<Position>.Failure(PositionErrors.PositionNotFoundById(id));
 
-                _cache.Set(cacheKey, position, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, position, TimeSpan.FromHours(1));
             }
             return Result<Position>.Success(position);
         }
@@ -76,8 +81,8 @@ namespace Infrastructure.Repositories.Staff
 
             _dbContext.Entry(existingPosition).CurrentValues.SetValues(position);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(PositionsCacheKey);
-            _cache.Remove($"{PositionCacheKeyPrefix}{position.Id}");
+            await _cacheProvider.RemoveAsync(PositionsCacheKey);
+            await _cacheProvider.RemoveAsync($"{PositionCacheKeyPrefix}{position.Id}");
             return Result.Success();
         }
 
@@ -89,8 +94,8 @@ namespace Infrastructure.Repositories.Staff
 
             _dbContext.Positions.Remove(position);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(PositionsCacheKey);
-            _cache.Remove($"{PositionCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(PositionsCacheKey);
+            await _cacheProvider.RemoveAsync($"{PositionCacheKeyPrefix}{id}");
             return Result.Success();
         }
 

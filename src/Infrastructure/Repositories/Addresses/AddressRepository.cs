@@ -1,32 +1,36 @@
-﻿using Domain.Abstraction;
+﻿using Application.Abstraction.Cache;
+using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Errors.Addresses;
 using Domain.Repositories.Addresses;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories.Addresses
 {
     public class AddressRepository : IAddressRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string AddressesCacheKey = "addressesCache";
         private const string AddressCacheKeyPrefix = "addressCache_";
 
-        public AddressRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public AddressRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<Address>>> GetAllAddressesAsync()
         {
-            if (!_cache.TryGetValue(AddressesCacheKey, out IEnumerable<Address> addresses))
+            var addresses = await _cacheProvider.GetAsync<IEnumerable<Address>>(AddressesCacheKey);
+            if (addresses == null)
             {
                 addresses = await _dbContext.Addresses.AsNoTracking().ToListAsync();
-                _cache.Set(AddressesCacheKey, addresses, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(AddressesCacheKey, addresses, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<Address>>.Success(addresses);
         }
@@ -38,20 +42,21 @@ namespace Infrastructure.Repositories.Addresses
 
             await _dbContext.Addresses.AddAsync(address);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(AddressesCacheKey);
+            await _cacheProvider.RemoveAsync(AddressesCacheKey);
             return Result<int>.Success(address.Id);
         }
 
         public async Task<Result<Address>> GetAddressByIdAsync(int id)
         {
             var cacheKey = $"{AddressCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out Address address))
+            var address = await _cacheProvider.GetAsync<Address>(cacheKey);
+            if (address == null)
             {
                 address = await _dbContext.Addresses.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
                 if (address == null)
                     return Result<Address>.Failure(AddressErrors.AddressNotFoundById(id));
 
-                _cache.Set(cacheKey, address, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, address, TimeSpan.FromHours(1));
             }
             return Result<Address>.Success(address);
         }
@@ -77,8 +82,8 @@ namespace Infrastructure.Repositories.Addresses
 
             _dbContext.Entry(existingAddress).CurrentValues.SetValues(address);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(AddressesCacheKey);
-            _cache.Remove($"{AddressCacheKeyPrefix}{address.Id}");
+            await _cacheProvider.RemoveAsync(AddressesCacheKey);
+            await _cacheProvider.RemoveAsync($"{AddressCacheKeyPrefix}{address.Id}");
             return Result.Success();
         }
 
@@ -90,8 +95,8 @@ namespace Infrastructure.Repositories.Addresses
 
             _dbContext.Addresses.Remove(address);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(AddressesCacheKey);
-            _cache.Remove($"{AddressCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(AddressesCacheKey);
+            await _cacheProvider.RemoveAsync($"{AddressCacheKeyPrefix}{id}");
             return Result.Success();
         }
 

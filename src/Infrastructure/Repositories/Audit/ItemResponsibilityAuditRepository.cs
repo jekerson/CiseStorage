@@ -1,32 +1,36 @@
-﻿using Domain.Abstraction;
+﻿using Application.Abstraction.Cache;
+using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Errors.Audit;
 using Domain.Repositories.Audit;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories.Audit
 {
     public class ItemResponsibilityAuditRepository : IItemResponsibilityAuditRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string ItemResponsibilityAuditsCacheKey = "itemResponsibilityAuditsCache";
         private const string ItemResponsibilityAuditCacheKeyPrefix = "itemResponsibilityAuditCache_";
 
-        public ItemResponsibilityAuditRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public ItemResponsibilityAuditRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<ItemResponsibilityAudit>>> GetAllItemResponsibilityAuditsAsync()
         {
-            if (!_cache.TryGetValue(ItemResponsibilityAuditsCacheKey, out IEnumerable<ItemResponsibilityAudit> itemResponsibilityAudits))
+            var itemResponsibilityAudits = await _cacheProvider.GetAsync<IEnumerable<ItemResponsibilityAudit>>(ItemResponsibilityAuditsCacheKey);
+            if (itemResponsibilityAudits == null)
             {
                 itemResponsibilityAudits = await _dbContext.ItemResponsibilityAudits.AsNoTracking().ToListAsync();
-                _cache.Set(ItemResponsibilityAuditsCacheKey, itemResponsibilityAudits, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(ItemResponsibilityAuditsCacheKey, itemResponsibilityAudits, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<ItemResponsibilityAudit>>.Success(itemResponsibilityAudits);
         }
@@ -35,20 +39,21 @@ namespace Infrastructure.Repositories.Audit
         {
             await _dbContext.ItemResponsibilityAudits.AddAsync(itemResponsibilityAudit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemResponsibilityAuditsCacheKey);
+            await _cacheProvider.RemoveAsync(ItemResponsibilityAuditsCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<ItemResponsibilityAudit>> GetItemResponsibilityAuditByIdAsync(int id)
         {
             var cacheKey = $"{ItemResponsibilityAuditCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out ItemResponsibilityAudit itemResponsibilityAudit))
+            var itemResponsibilityAudit = await _cacheProvider.GetAsync<ItemResponsibilityAudit>(cacheKey);
+            if (itemResponsibilityAudit == null)
             {
                 itemResponsibilityAudit = await _dbContext.ItemResponsibilityAudits.AsNoTracking().FirstOrDefaultAsync(ira => ira.Id == id);
                 if (itemResponsibilityAudit == null)
                     return Result<ItemResponsibilityAudit>.Failure(ItemResponsibilityAuditErrors.ItemResponsibilityAuditNotFoundById(id));
 
-                _cache.Set(cacheKey, itemResponsibilityAudit, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, itemResponsibilityAudit, TimeSpan.FromHours(1));
             }
             return Result<ItemResponsibilityAudit>.Success(itemResponsibilityAudit);
         }
@@ -85,8 +90,8 @@ namespace Infrastructure.Repositories.Audit
 
             _dbContext.Entry(existingItemResponsibilityAudit).CurrentValues.SetValues(itemResponsibilityAudit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemResponsibilityAuditsCacheKey);
-            _cache.Remove($"{ItemResponsibilityAuditCacheKeyPrefix}{itemResponsibilityAudit.Id}");
+            await _cacheProvider.RemoveAsync(ItemResponsibilityAuditsCacheKey);
+            await _cacheProvider.RemoveAsync($"{ItemResponsibilityAuditCacheKeyPrefix}{itemResponsibilityAudit.Id}");
             return Result.Success();
         }
 
@@ -98,8 +103,8 @@ namespace Infrastructure.Repositories.Audit
 
             _dbContext.ItemResponsibilityAudits.Remove(itemResponsibilityAudit);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemResponsibilityAuditsCacheKey);
-            _cache.Remove($"{ItemResponsibilityAuditCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(ItemResponsibilityAuditsCacheKey);
+            await _cacheProvider.RemoveAsync($"{ItemResponsibilityAuditCacheKeyPrefix}{id}");
             return Result.Success();
         }
     }

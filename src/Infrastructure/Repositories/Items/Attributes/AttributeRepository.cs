@@ -2,30 +2,34 @@
 using Domain.Errors.Items.Attributes;
 using Domain.Repositories.Item.Attributes;
 using Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Items.Attributes
 {
     public class AttributeRepository : IAttributeRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string AttributesCacheKey = "attributesCache";
         private const string AttributeCacheKeyPrefix = "attributeCache_";
 
-        public AttributeRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public AttributeRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<Domain.Entities.Attribute>>> GetAllAttributesAsync()
         {
-            if (!_cache.TryGetValue(AttributesCacheKey, out IEnumerable<Domain.Entities.Attribute> attributes))
+            var attributes = await _cacheProvider.GetAsync<IEnumerable<Domain.Entities.Attribute>>(AttributesCacheKey);
+            if (attributes == null)
             {
                 attributes = await _dbContext.Attributes.AsNoTracking().ToListAsync();
-                _cache.Set(AttributesCacheKey, attributes, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(AttributesCacheKey, attributes, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<Domain.Entities.Attribute>>.Success(attributes);
         }
@@ -37,20 +41,21 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             await _dbContext.Attributes.AddAsync(attribute);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(AttributesCacheKey);
+            await _cacheProvider.RemoveAsync(AttributesCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<Domain.Entities.Attribute>> GetAttributeByIdAsync(int id)
         {
             var cacheKey = $"{AttributeCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out Domain.Entities.Attribute attribute))
+            var attribute = await _cacheProvider.GetAsync<Domain.Entities.Attribute>(cacheKey);
+            if (attribute == null)
             {
                 attribute = await _dbContext.Attributes.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
                 if (attribute == null)
                     return Result<Domain.Entities.Attribute>.Failure(AttributeErrors.AttributeNotFoundById(id));
 
-                _cache.Set(cacheKey, attribute, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, attribute, TimeSpan.FromHours(1));
             }
             return Result<Domain.Entities.Attribute>.Success(attribute);
         }
@@ -91,8 +96,8 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             _dbContext.Entry(existingAttribute).CurrentValues.SetValues(attribute);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(AttributesCacheKey);
-            _cache.Remove($"{AttributeCacheKeyPrefix}{attribute.Id}");
+            await _cacheProvider.RemoveAsync(AttributesCacheKey);
+            await _cacheProvider.RemoveAsync($"{AttributeCacheKeyPrefix}{attribute.Id}");
             return Result.Success();
         }
 
@@ -104,8 +109,8 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             _dbContext.Attributes.Remove(attribute);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(AttributesCacheKey);
-            _cache.Remove($"{AttributeCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(AttributesCacheKey);
+            await _cacheProvider.RemoveAsync($"{AttributeCacheKeyPrefix}{id}");
             return Result.Success();
         }
 

@@ -3,30 +3,34 @@ using Domain.Entities;
 using Domain.Errors.Items;
 using Domain.Repositories.Item;
 using Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Items
 {
     public class ItemResponsibilityRepository : IItemResponsibilityRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string ItemResponsibilitiesCacheKey = "itemResponsibilitiesCache";
         private const string ItemResponsibilityCacheKeyPrefix = "itemResponsibilityCache_";
 
-        public ItemResponsibilityRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public ItemResponsibilityRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<ItemResponsibility>>> GetAllItemResponsibilitiesAsync()
         {
-            if (!_cache.TryGetValue(ItemResponsibilitiesCacheKey, out IEnumerable<ItemResponsibility> itemResponsibilities))
+            var itemResponsibilities = await _cacheProvider.GetAsync<IEnumerable<ItemResponsibility>>(ItemResponsibilitiesCacheKey);
+            if (itemResponsibilities == null)
             {
                 itemResponsibilities = await _dbContext.ItemResponsibilities.AsNoTracking().ToListAsync();
-                _cache.Set(ItemResponsibilitiesCacheKey, itemResponsibilities, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(ItemResponsibilitiesCacheKey, itemResponsibilities, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<ItemResponsibility>>.Success(itemResponsibilities);
         }
@@ -35,20 +39,21 @@ namespace Infrastructure.Repositories.Items
         {
             await _dbContext.ItemResponsibilities.AddAsync(itemResponsibility);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemResponsibilitiesCacheKey);
+            await _cacheProvider.RemoveAsync(ItemResponsibilitiesCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<ItemResponsibility>> GetItemResponsibilityByIdAsync(int id)
         {
             var cacheKey = $"{ItemResponsibilityCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out ItemResponsibility itemResponsibility))
+            var itemResponsibility = await _cacheProvider.GetAsync<ItemResponsibility>(cacheKey);
+            if (itemResponsibility == null)
             {
                 itemResponsibility = await _dbContext.ItemResponsibilities.AsNoTracking().FirstOrDefaultAsync(ir => ir.Id == id);
                 if (itemResponsibility == null)
                     return Result<ItemResponsibility>.Failure(ItemResponsibilityErrors.ItemResponsibilityNotFoundById(id));
 
-                _cache.Set(cacheKey, itemResponsibility, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, itemResponsibility, TimeSpan.FromHours(1));
             }
             return Result<ItemResponsibility>.Success(itemResponsibility);
         }
@@ -73,8 +78,8 @@ namespace Infrastructure.Repositories.Items
 
             _dbContext.Entry(existingItemResponsibility).CurrentValues.SetValues(itemResponsibility);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemResponsibilitiesCacheKey);
-            _cache.Remove($"{ItemResponsibilityCacheKeyPrefix}{itemResponsibility.Id}");
+            await _cacheProvider.RemoveAsync(ItemResponsibilitiesCacheKey);
+            await _cacheProvider.RemoveAsync($"{ItemResponsibilityCacheKeyPrefix}{itemResponsibility.Id}");
             return Result.Success();
         }
 
@@ -86,8 +91,8 @@ namespace Infrastructure.Repositories.Items
 
             _dbContext.ItemResponsibilities.Remove(itemResponsibility);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemResponsibilitiesCacheKey);
-            _cache.Remove($"{ItemResponsibilityCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(ItemResponsibilitiesCacheKey);
+            await _cacheProvider.RemoveAsync($"{ItemResponsibilityCacheKeyPrefix}{id}");
             return Result.Success();
         }
     }

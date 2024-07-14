@@ -1,32 +1,36 @@
-﻿using Domain.Abstraction;
+﻿using Application.Abstraction.Cache;
+using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Errors.Staff;
 using Domain.Repositories.Staff;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories.Staff
 {
     public class UserRepository : IUserRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string UsersCacheKey = "usersCache";
         private const string UserCacheKeyPrefix = "userCache_";
 
-        public UserRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public UserRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<UserInfo>>> GetAllUsersAsync()
         {
-            if (!_cache.TryGetValue(UsersCacheKey, out IEnumerable<UserInfo> users))
+            var users = await _cacheProvider.GetAsync<IEnumerable<UserInfo>>(UsersCacheKey);
+            if (users == null)
             {
                 users = await _dbContext.UserInfos.AsNoTracking().Where(u => !u.IsDeleted).ToListAsync();
-                _cache.Set(UsersCacheKey, users, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(UsersCacheKey, users, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<UserInfo>>.Success(users);
         }
@@ -38,20 +42,21 @@ namespace Infrastructure.Repositories.Staff
 
             await _dbContext.UserInfos.AddAsync(userInfo);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(UsersCacheKey);
+            await _cacheProvider.RemoveAsync(UsersCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<UserInfo>> GetUserByIdAsync(int id)
         {
             var cacheKey = $"{UserCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out UserInfo user))
+            var user = await _cacheProvider.GetAsync<UserInfo>(cacheKey);
+            if (user == null)
             {
                 user = await _dbContext.UserInfos.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
                 if (user == null)
                     return Result<UserInfo>.Failure(UserErrors.UserNotFoundById(id));
 
-                _cache.Set(cacheKey, user, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, user, TimeSpan.FromHours(1));
             }
             return Result<UserInfo>.Success(user);
         }
@@ -76,8 +81,8 @@ namespace Infrastructure.Repositories.Staff
 
             _dbContext.Entry(existingUser).CurrentValues.SetValues(userInfo);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(UsersCacheKey);
-            _cache.Remove($"{UserCacheKeyPrefix}{userInfo.Id}");
+            await _cacheProvider.RemoveAsync(UsersCacheKey);
+            await _cacheProvider.RemoveAsync($"{UserCacheKeyPrefix}{userInfo.Id}");
             return Result.Success();
         }
 
@@ -89,8 +94,8 @@ namespace Infrastructure.Repositories.Staff
 
             user.IsDeleted = true;
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(UsersCacheKey);
-            _cache.Remove($"{UserCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(UsersCacheKey);
+            await _cacheProvider.RemoveAsync($"{UserCacheKeyPrefix}{id}");
             return Result.Success();
         }
 
@@ -123,6 +128,4 @@ namespace Infrastructure.Repositories.Staff
             return await _dbContext.UserInfos.AnyAsync(u => u.Username == username && !u.IsDeleted);
         }
     }
-
-
 }

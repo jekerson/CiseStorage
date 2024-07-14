@@ -3,30 +3,34 @@ using Domain.Entities;
 using Domain.Errors.Items.Attributes;
 using Domain.Repositories.Item.Attributes;
 using Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Items.Attributes
 {
     public class UnitCategoryRepository : IUnitCategoryRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string UnitCategoriesCacheKey = "unitCategoriesCache";
         private const string UnitCategoryCacheKeyPrefix = "unitCategoryCache_";
 
-        public UnitCategoryRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public UnitCategoryRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<UnitCategory>>> GetAllUnitCategoriesAsync()
         {
-            if (!_cache.TryGetValue(UnitCategoriesCacheKey, out IEnumerable<UnitCategory> unitCategories))
+            var unitCategories = await _cacheProvider.GetAsync<IEnumerable<UnitCategory>>(UnitCategoriesCacheKey);
+            if (unitCategories == null)
             {
                 unitCategories = await _dbContext.UnitCategories.AsNoTracking().ToListAsync();
-                _cache.Set(UnitCategoriesCacheKey, unitCategories, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(UnitCategoriesCacheKey, unitCategories, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<UnitCategory>>.Success(unitCategories);
         }
@@ -38,20 +42,21 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             await _dbContext.UnitCategories.AddAsync(unitCategory);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(UnitCategoriesCacheKey);
+            await _cacheProvider.RemoveAsync(UnitCategoriesCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<UnitCategory>> GetUnitCategoryByIdAsync(int id)
         {
             var cacheKey = $"{UnitCategoryCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out UnitCategory unitCategory))
+            var unitCategory = await _cacheProvider.GetAsync<UnitCategory>(cacheKey);
+            if (unitCategory == null)
             {
                 unitCategory = await _dbContext.UnitCategories.AsNoTracking().FirstOrDefaultAsync(uc => uc.Id == id);
                 if (unitCategory == null)
                     return Result<UnitCategory>.Failure(UnitCategoryErrors.UnitCategoryNotFoundById(id));
 
-                _cache.Set(cacheKey, unitCategory, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, unitCategory, TimeSpan.FromHours(1));
             }
             return Result<UnitCategory>.Success(unitCategory);
         }
@@ -76,8 +81,8 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             _dbContext.Entry(existingUnitCategory).CurrentValues.SetValues(unitCategory);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(UnitCategoriesCacheKey);
-            _cache.Remove($"{UnitCategoryCacheKeyPrefix}{unitCategory.Id}");
+            await _cacheProvider.RemoveAsync(UnitCategoriesCacheKey);
+            await _cacheProvider.RemoveAsync($"{UnitCategoryCacheKeyPrefix}{unitCategory.Id}");
             return Result.Success();
         }
 
@@ -89,8 +94,8 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             _dbContext.UnitCategories.Remove(unitCategory);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(UnitCategoriesCacheKey);
-            _cache.Remove($"{UnitCategoryCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(UnitCategoriesCacheKey);
+            await _cacheProvider.RemoveAsync($"{UnitCategoryCacheKeyPrefix}{id}");
             return Result.Success();
         }
 

@@ -3,30 +3,34 @@ using Domain.Entities;
 using Domain.Errors.Items.Attributes;
 using Domain.Repositories.Item.Attributes;
 using Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Items.Attributes
 {
     public class ItemCategoryAttributeRepository : IItemCategoryAttributeRepository
     {
         private readonly SiceDbContext _dbContext;
-        private readonly IMemoryCache _cache;
+        private readonly ICacheProvider _cacheProvider;
         private const string ItemCategoryAttributesCacheKey = "itemCategoryAttributesCache";
         private const string ItemCategoryAttributeCacheKeyPrefix = "itemCategoryAttributeCache_";
 
-        public ItemCategoryAttributeRepository(SiceDbContext dbContext, IMemoryCache cache)
+        public ItemCategoryAttributeRepository(SiceDbContext dbContext, ICacheProvider cacheProvider)
         {
             _dbContext = dbContext;
-            _cache = cache;
+            _cacheProvider = cacheProvider;
         }
 
         public async Task<Result<IEnumerable<ItemCategoryAttribute>>> GetAllItemCategoryAttributesAsync()
         {
-            if (!_cache.TryGetValue(ItemCategoryAttributesCacheKey, out IEnumerable<ItemCategoryAttribute> itemCategoryAttributes))
+            var itemCategoryAttributes = await _cacheProvider.GetAsync<IEnumerable<ItemCategoryAttribute>>(ItemCategoryAttributesCacheKey);
+            if (itemCategoryAttributes == null)
             {
                 itemCategoryAttributes = await _dbContext.ItemCategoryAttributes.AsNoTracking().ToListAsync();
-                _cache.Set(ItemCategoryAttributesCacheKey, itemCategoryAttributes, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(ItemCategoryAttributesCacheKey, itemCategoryAttributes, TimeSpan.FromHours(1));
             }
             return Result<IEnumerable<ItemCategoryAttribute>>.Success(itemCategoryAttributes);
         }
@@ -35,20 +39,21 @@ namespace Infrastructure.Repositories.Items.Attributes
         {
             await _dbContext.ItemCategoryAttributes.AddAsync(itemCategoryAttribute);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemCategoryAttributesCacheKey);
+            await _cacheProvider.RemoveAsync(ItemCategoryAttributesCacheKey);
             return Result.Success();
         }
 
         public async Task<Result<ItemCategoryAttribute>> GetItemCategoryAttributeByIdAsync(int id)
         {
             var cacheKey = $"{ItemCategoryAttributeCacheKeyPrefix}{id}";
-            if (!_cache.TryGetValue(cacheKey, out ItemCategoryAttribute itemCategoryAttribute))
+            var itemCategoryAttribute = await _cacheProvider.GetAsync<ItemCategoryAttribute>(cacheKey);
+            if (itemCategoryAttribute == null)
             {
                 itemCategoryAttribute = await _dbContext.ItemCategoryAttributes.AsNoTracking().FirstOrDefaultAsync(ica => ica.Id == id);
                 if (itemCategoryAttribute == null)
                     return Result<ItemCategoryAttribute>.Failure(ItemCategoryAttributeErrors.ItemCategoryAttributeNotFoundById(id));
 
-                _cache.Set(cacheKey, itemCategoryAttribute, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1)));
+                await _cacheProvider.SetAsync(cacheKey, itemCategoryAttribute, TimeSpan.FromHours(1));
             }
             return Result<ItemCategoryAttribute>.Success(itemCategoryAttribute);
         }
@@ -77,8 +82,8 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             _dbContext.Entry(existingItemCategoryAttribute).CurrentValues.SetValues(itemCategoryAttribute);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemCategoryAttributesCacheKey);
-            _cache.Remove($"{ItemCategoryAttributeCacheKeyPrefix}{itemCategoryAttribute.Id}");
+            await _cacheProvider.RemoveAsync(ItemCategoryAttributesCacheKey);
+            await _cacheProvider.RemoveAsync($"{ItemCategoryAttributeCacheKeyPrefix}{itemCategoryAttribute.Id}");
             return Result.Success();
         }
 
@@ -90,8 +95,8 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             _dbContext.ItemCategoryAttributes.Remove(itemCategoryAttribute);
             await _dbContext.SaveChangesAsync();
-            _cache.Remove(ItemCategoryAttributesCacheKey);
-            _cache.Remove($"{ItemCategoryAttributeCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(ItemCategoryAttributesCacheKey);
+            await _cacheProvider.RemoveAsync($"{ItemCategoryAttributeCacheKeyPrefix}{id}");
             return Result.Success();
         }
     }
