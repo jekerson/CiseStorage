@@ -29,9 +29,7 @@ namespace Application.Attributes.UnitCategories.Command
 
             var result = await _unitCategoryRepository.AddUnitCategoryAsync(unitCategory);
             if (result.IsFailure)
-            {
                 return Result.Failure(result.Error);
-            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
