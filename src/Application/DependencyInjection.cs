@@ -1,5 +1,6 @@
 ﻿using Application.Abstraction.Behavior;
 using Application.Services.Addresses;
+using Application.Services.Attributes.Datatype;
 using Application.Services.Audit.Staff;
 using Application.Services.Password;
 using Application.Users.Auth.Registration;
@@ -18,6 +19,7 @@ namespace Application
             services.AddScoped<IPasswordService, PasswordService>();
             services.AddScoped<IEmployeeAuditService, EmployeeAuditService>();
             services.AddScoped<IAddressService, AddressService>();
+            services.AddScoped<IAttributeValueTypeService, AttributeValueTypeService>();
 
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
 
