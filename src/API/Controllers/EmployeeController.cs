@@ -72,9 +72,8 @@ namespace API.Controllers
 
         [HttpPost("add")]
         //[HasPermission("write_employee")]
-        public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeDto employeeDto)
+        public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeCommand command)
         {
-            var command = new AddEmployeeCommand(employeeDto);
             var result = await _mediator.Send(command);
 
             return result.IsSuccess
@@ -84,9 +83,8 @@ namespace API.Controllers
 
         [HttpPut("update")]
         //[HasPermission("write_employee")]
-        public async Task<IActionResult> UpdateEmployee([FromBody] UpdateEmployeeDto employeeDto)
+        public async Task<IActionResult> UpdateEmployee([FromBody] UpdateEmployeeCommand command)
         {
-            var command = new UpdateEmployeeCommand(employeeDto);
             var result = await _mediator.Send(command);
 
             return result.IsSuccess
