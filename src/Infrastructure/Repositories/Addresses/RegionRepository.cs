@@ -5,9 +5,6 @@ using Domain.Errors.Addresses;
 using Domain.Repositories.Addresses;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories.Addresses
 {

@@ -5,9 +5,6 @@ using Domain.Errors.Items.Attributes;
 using Domain.Repositories.Item.Attributes;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories.Items.Attributes
 {

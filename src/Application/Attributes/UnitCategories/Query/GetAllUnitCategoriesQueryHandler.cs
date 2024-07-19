@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Application.Abstraction.Messaging;
 using Application.DTOs.Attributes;
 using Domain.Abstraction;
@@ -9,7 +5,7 @@ using Domain.Repositories.Item.Attributes;
 
 namespace Application.Attributes.UnitCategories.Query
 {
-public class GetAllUnitCategoriesQueryHandler : IQueryHandler<GetAllUnitCategoriesQuery, IEnumerable<UnitCategoryDto>>
+    public class GetAllUnitCategoriesQueryHandler : IQueryHandler<GetAllUnitCategoriesQuery, IEnumerable<UnitCategoryDto>>
     {
         private readonly IUnitCategoryRepository _unitCategoryRepository;
 

@@ -1,11 +1,6 @@
 ﻿using Application.Abstraction.Messaging;
 using Domain.Abstraction;
 using Domain.Repositories.Staff;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.Employees.Commands.ChangePosition
 {
@@ -20,12 +15,12 @@ namespace Application.Employees.Commands.ChangePosition
 
         public async Task<Result> Handle(UpdateEmployeePositionCommand request, CancellationToken cancellationToken)
         {
-            var employeeResult = await _employeeRepository.GetEmployeeByIdAsync(request.EmployeeId);
+            var employeeResult = await _employeeRepository.GetEmployeeByIdAsync(request.UpdateEmployeePositionDto.EmployeeId);
             if (!employeeResult.IsSuccess)
                 return Result.Failure(employeeResult.Error);
 
             var employee = employeeResult.Value;
-            employee.PositionId = request.NewPositionId;
+            employee.PositionId = request.UpdateEmployeePositionDto.NewPositionId;
 
             return await _employeeRepository.UpdateEmployeeAsync(employee);
         }

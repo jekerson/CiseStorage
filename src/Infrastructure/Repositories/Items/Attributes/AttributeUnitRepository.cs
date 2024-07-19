@@ -1,13 +1,10 @@
-﻿using Domain.Abstraction;
+﻿using Application.Abstraction.Cache;
+using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Errors.Items.Attributes;
 using Domain.Repositories.Item.Attributes;
 using Infrastructure.Data;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Items.Attributes
 {
@@ -26,23 +23,17 @@ namespace Infrastructure.Repositories.Items.Attributes
 
         public async Task<Result<IEnumerable<AttributeUnit>>> GetAllAttributeUnitsAsync()
         {
-            var attributeUnits = await _cacheProvider.GetAsync<IEnumerable<AttributeUnit>>(AttributeUnitsCacheKey);
-            if (attributeUnits == null)
-            {
-                attributeUnits = await _dbContext.AttributeUnits.AsNoTracking().ToListAsync();
-                await _cacheProvider.SetAsync(AttributeUnitsCacheKey, attributeUnits, TimeSpan.FromHours(1));
-            }
+            var cachedAttributeUnits = await _cacheProvider.GetAsync<IEnumerable<AttributeUnit>>(AttributeUnitsCacheKey);
+            if (cachedAttributeUnits != null)
+                return Result<IEnumerable<AttributeUnit>>.Success(cachedAttributeUnits);
+
+            var attributeUnits = await _dbContext.AttributeUnits.AsNoTracking().ToListAsync();
+            await _cacheProvider.SetAsync(AttributeUnitsCacheKey, attributeUnits);
             return Result<IEnumerable<AttributeUnit>>.Success(attributeUnits);
         }
 
         public async Task<Result> AddAttributeUnitAsync(AttributeUnit attributeUnit)
         {
-            if (await IsAttributeUnitExistByNameAsync(attributeUnit.Name))
-                return Result.Failure(AttributeUnitErrors.AttributeUnitAlreadyExistByName(attributeUnit.Name));
-
-            if (await IsAttributeUnitExistBySymbolAsync(attributeUnit.Symbol))
-                return Result.Failure(AttributeUnitErrors.AttributeUnitAlreadyExistBySymbol(attributeUnit.Symbol));
-
             await _dbContext.AttributeUnits.AddAsync(attributeUnit);
             await _dbContext.SaveChangesAsync();
             await _cacheProvider.RemoveAsync(AttributeUnitsCacheKey);
@@ -52,34 +43,33 @@ namespace Infrastructure.Repositories.Items.Attributes
         public async Task<Result<AttributeUnit>> GetAttributeUnitByIdAsync(int id)
         {
             var cacheKey = $"{AttributeUnitCacheKeyPrefix}{id}";
-            var attributeUnit = await _cacheProvider.GetAsync<AttributeUnit>(cacheKey);
-            if (attributeUnit == null)
-            {
-                attributeUnit = await _dbContext.AttributeUnits.AsNoTracking().FirstOrDefaultAsync(au => au.Id == id);
-                if (attributeUnit == null)
-                    return Result<AttributeUnit>.Failure(AttributeUnitErrors.AttributeUnitNotFoundById(id));
+            var cachedAttributeUnit = await _cacheProvider.GetAsync<AttributeUnit>(cacheKey);
+            if (cachedAttributeUnit != null)
+                return Result<AttributeUnit>.Success(cachedAttributeUnit);
 
-                await _cacheProvider.SetAsync(cacheKey, attributeUnit, TimeSpan.FromHours(1));
+            var attributeUnit = await _dbContext.AttributeUnits.FindAsync(id);
+            if (attributeUnit != null)
+            {
+                await _cacheProvider.SetAsync(cacheKey, attributeUnit);
+                return Result<AttributeUnit>.Success(attributeUnit);
             }
-            return Result<AttributeUnit>.Success(attributeUnit);
+            return Result<AttributeUnit>.Failure(AttributeUnitErrors.AttributeUnitNotFoundById(id));
         }
 
         public async Task<Result<AttributeUnit>> GetAttributeUnitByNameAsync(string name)
         {
-            var attributeUnit = await _dbContext.AttributeUnits.AsNoTracking().FirstOrDefaultAsync(au => au.Name == name);
-            if (attributeUnit == null)
-                return Result<AttributeUnit>.Failure(AttributeUnitErrors.AttributeUnitNotFoundByName(name));
-
-            return Result<AttributeUnit>.Success(attributeUnit);
+            var attributeUnit = await _dbContext.AttributeUnits.FirstOrDefaultAsync(au => au.Name == name);
+            return attributeUnit != null
+                ? Result<AttributeUnit>.Success(attributeUnit)
+                : Result<AttributeUnit>.Failure(AttributeUnitErrors.AttributeUnitNotFoundByName(name));
         }
 
         public async Task<Result<AttributeUnit>> GetAttributeUnitBySymbolAsync(string symbol)
         {
-            var attributeUnit = await _dbContext.AttributeUnits.AsNoTracking().FirstOrDefaultAsync(au => au.Symbol == symbol);
-            if (attributeUnit == null)
-                return Result<AttributeUnit>.Failure(AttributeUnitErrors.AttributeUnitNotFoundBySymbol(symbol));
-
-            return Result<AttributeUnit>.Success(attributeUnit);
+            var attributeUnit = await _dbContext.AttributeUnits.FirstOrDefaultAsync(au => au.Symbol == symbol);
+            return attributeUnit != null
+                ? Result<AttributeUnit>.Success(attributeUnit)
+                : Result<AttributeUnit>.Failure(AttributeUnitErrors.AttributeUnitNotFoundBySymbol(symbol));
         }
 
         public async Task<Result> UpdateAttributeUnitAsync(AttributeUnit attributeUnit)
@@ -88,16 +78,10 @@ namespace Infrastructure.Repositories.Items.Attributes
             if (existingAttributeUnit == null)
                 return Result.Failure(AttributeUnitErrors.AttributeUnitNotFoundById(attributeUnit.Id));
 
-            if (existingAttributeUnit.Name != attributeUnit.Name && await IsAttributeUnitExistByNameAsync(attributeUnit.Name))
-                return Result.Failure(AttributeUnitErrors.AttributeUnitAlreadyExistByName(attributeUnit.Name));
-
-            if (existingAttributeUnit.Symbol != attributeUnit.Symbol && await IsAttributeUnitExistBySymbolAsync(attributeUnit.Symbol))
-                return Result.Failure(AttributeUnitErrors.AttributeUnitAlreadyExistBySymbol(attributeUnit.Symbol));
-
             _dbContext.Entry(existingAttributeUnit).CurrentValues.SetValues(attributeUnit);
             await _dbContext.SaveChangesAsync();
-            await _cacheProvider.RemoveAsync(AttributeUnitsCacheKey);
             await _cacheProvider.RemoveAsync($"{AttributeUnitCacheKeyPrefix}{attributeUnit.Id}");
+            await _cacheProvider.RemoveAsync(AttributeUnitsCacheKey);
             return Result.Success();
         }
 
@@ -109,19 +93,31 @@ namespace Infrastructure.Repositories.Items.Attributes
 
             _dbContext.AttributeUnits.Remove(attributeUnit);
             await _dbContext.SaveChangesAsync();
-            await _cacheProvider.RemoveAsync(AttributeUnitsCacheKey);
             await _cacheProvider.RemoveAsync($"{AttributeUnitCacheKeyPrefix}{id}");
+            await _cacheProvider.RemoveAsync(AttributeUnitsCacheKey);
             return Result.Success();
         }
 
-        private async Task<bool> IsAttributeUnitExistByNameAsync(string name)
+        // Eager loading methods
+        public async Task<Result<IEnumerable<AttributeUnit>>> GetAllAttributeUnitsWithEntitiesAsync()
         {
-            return await _dbContext.AttributeUnits.AnyAsync(au => au.Name == name);
+            var attributeUnits = await _dbContext.AttributeUnits
+                .Include(au => au.UnitCategory)
+                .Include(au => au.AttributeValueType)
+                .AsNoTracking()
+                .ToListAsync();
+            return Result<IEnumerable<AttributeUnit>>.Success(attributeUnits);
         }
 
-        private async Task<bool> IsAttributeUnitExistBySymbolAsync(string symbol)
+        public async Task<Result<AttributeUnit>> GetAttributeUnitWithEntitiesByIdAsync(int id)
         {
-            return await _dbContext.AttributeUnits.AnyAsync(au => au.Symbol == symbol);
+            var attributeUnit = await _dbContext.AttributeUnits
+                .Include(au => au.UnitCategory)
+                .Include(au => au.AttributeValueType)
+                .FirstOrDefaultAsync(au => au.Id == id);
+            return attributeUnit != null
+                ? Result<AttributeUnit>.Success(attributeUnit)
+                : Result<AttributeUnit>.Failure(AttributeUnitErrors.AttributeUnitNotFoundById(id));
         }
     }
 }

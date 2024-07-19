@@ -21,7 +21,7 @@ namespace Application.Employees.Commands.DeleteEmployee
 
         public async Task<Result> Handle(DeleteEmployeeCommand request, CancellationToken cancellationToken)
         {
-            var employeeResult = await _employeeRepository.GetEmployeeByIdAsync(request.EmployeeId);
+            var employeeResult = await _employeeRepository.GetEmployeeByIdAsync(request.DeleteEmployeeDto.EmployeeId);
             if (!employeeResult.IsSuccess)
                 return Result.Failure(employeeResult.Error);
 
@@ -31,7 +31,7 @@ namespace Application.Employees.Commands.DeleteEmployee
             if (!deleteResult.IsSuccess)
                 return Result.Failure(deleteResult.Error);
 
-            var auditResult = await _employeeAuditService.AddEmployeeAuditAsync(ActionType.Delete, request.UserId, employee.Id);
+            var auditResult = await _employeeAuditService.AddEmployeeAuditAsync(ActionType.Delete, request.DeleteEmployeeDto.UserId, employee.Id);
             if (!auditResult.IsSuccess)
                 return Result.Failure(auditResult.Error);
 

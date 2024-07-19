@@ -9,7 +9,6 @@ using Application.Employees.Commands.UpdateEmployee;
 using Application.Employees.Queries.GetAllEmployee;
 using Application.Employees.Queries.Search.ById;
 using Application.Employees.Queries.Search.ByTerm;
-using Infrastructure.Authentication;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -72,8 +71,9 @@ namespace API.Controllers
 
         [HttpPost("add")]
         //[HasPermission("write_employee")]
-        public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeCommand command)
+        public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeDto dto)
         {
+            var command = new AddEmployeeCommand(dto);
             var result = await _mediator.Send(command);
 
             return result.IsSuccess
@@ -83,8 +83,9 @@ namespace API.Controllers
 
         [HttpPut("update")]
         //[HasPermission("write_employee")]
-        public async Task<IActionResult> UpdateEmployee([FromBody] UpdateEmployeeCommand command)
+        public async Task<IActionResult> UpdateEmployee([FromBody] UpdateEmployeeDto dto)
         {
+            var command = new UpdateEmployeeCommand(dto);
             var result = await _mediator.Send(command);
 
             return result.IsSuccess
@@ -94,8 +95,9 @@ namespace API.Controllers
 
         [HttpDelete("delete")]
         //[HasPermission("write_employee")]
-        public async Task<IActionResult> DeleteEmployee([FromBody] DeleteEmployeeCommand command)
+        public async Task<IActionResult> DeleteEmployee([FromBody] DeleteEmployeeDto dto)
         {
+            var command = new DeleteEmployeeCommand(dto);
             var result = await _mediator.Send(command);
 
             return result.IsSuccess
@@ -105,8 +107,9 @@ namespace API.Controllers
 
         [HttpPut("update-position")]
         //[HasPermission("write_employee")]
-        public async Task<IActionResult> UpdateEmployeePosition([FromBody] UpdateEmployeePositionCommand command)
+        public async Task<IActionResult> UpdateEmployeePosition([FromBody] UpdateEmployeePositionDto dto)
         {
+            var command = new UpdateEmployeePositionCommand(dto);
             var result = await _mediator.Send(command);
             if (!result.IsSuccess)
                 return BadRequest(result.Error);

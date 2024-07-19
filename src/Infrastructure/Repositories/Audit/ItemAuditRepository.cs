@@ -5,9 +5,6 @@ using Domain.Errors.Audit;
 using Domain.Repositories.Audit;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories.Audit
 {

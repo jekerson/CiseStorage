@@ -1,14 +1,10 @@
-﻿using Domain.Abstraction;
+﻿using Application.Abstraction.Cache;
+using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Errors;
 using Domain.Repositories.Role_permission;
 using Infrastructure.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Role_permission
 {
@@ -101,14 +97,14 @@ namespace Infrastructure.Repositories.Role_permission
 
         public async Task<Result<IEnumerable<Permission>>> GetPermissionsByUserIdAsync(int userId)
         {
-            var permissions =  await _dbContext.UserRoles
+            var permissions = await _dbContext.UserRoles
                     .Where(ur => ur.UserInfoId == userId)
                     .SelectMany(ur => ur.Role.RolePermissions)
                     .Select(rp => rp.Permission)
                     .Distinct()
                     .AsNoTracking()
                     .ToListAsync();
-                    
+
             return Result<IEnumerable<Permission>>.Success(permissions);
         }
 

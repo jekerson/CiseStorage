@@ -5,7 +5,6 @@ using Domain.Errors.Staff;
 using Domain.Repositories.Staff;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Infrastructure.Repositories.Staff
 {

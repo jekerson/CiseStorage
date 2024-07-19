@@ -1,13 +1,10 @@
-﻿using Domain.Abstraction;
+﻿using Application.Abstraction.Cache;
+using Domain.Abstraction;
 using Domain.Entities;
 using Domain.Errors.Items;
 using Domain.Repositories.Item;
 using Infrastructure.Data;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Application.Abstraction.Cache;
 
 namespace Infrastructure.Repositories.Items
 {

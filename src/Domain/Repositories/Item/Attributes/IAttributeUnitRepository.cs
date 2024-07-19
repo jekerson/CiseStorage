@@ -12,5 +12,10 @@ namespace Domain.Repositories.Item.Attributes
         Task<Result<AttributeUnit>> GetAttributeUnitBySymbolAsync(string symbol);
         Task<Result> UpdateAttributeUnitAsync(AttributeUnit attributeUnit);
         Task<Result> DeleteAttributeUnitAsync(int id);
+
+        // Eager Get All and by id with their related entities
+        Task<Result<IEnumerable<AttributeUnit>>> GetAllAttributeUnitsWithEntitiesAsync();
+        Task<Result<AttributeUnit>> GetAttributeUnitWithEntitiesByIdAsync(int id);
+
     }
 }
