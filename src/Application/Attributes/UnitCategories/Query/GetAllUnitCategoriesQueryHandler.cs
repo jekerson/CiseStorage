@@ -20,11 +20,10 @@ namespace Application.Attributes.UnitCategories.Query
             if (unitCategoriesResult.IsFailure)
                 return Result<IEnumerable<UnitCategoryDto>>.Failure(unitCategoriesResult.Error);
 
-            var unitCategories = unitCategoriesResult.Value.Select(uc => new UnitCategoryDto
-            {
-                Id = uc.Id,
-                Name = uc.Name
-            });
+            var unitCategories = unitCategoriesResult.Value.Select(uc => new UnitCategoryDto(
+                uc.Id,
+                uc.Name
+            ));
 
             return Result<IEnumerable<UnitCategoryDto>>.Success(unitCategories);
         }

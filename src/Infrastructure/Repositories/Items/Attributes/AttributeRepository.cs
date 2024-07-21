@@ -111,6 +111,33 @@ namespace Infrastructure.Repositories.Items.Attributes
             return Result.Success();
         }
 
+        public async Task<Result<IEnumerable<Domain.Entities.Attribute>>> GetAttributesWithEntitiesByIdsAsync(IEnumerable<int> attributeIds)
+        {
+            var attributes = await _dbContext.Attributes
+                .Include(a => a.AttributeCategory)
+                .Include(a => a.AttributeUnit)
+                .ThenInclude(au => au.AttributeValueType)
+                .Include(a => a.AttributeUnit)
+                .ThenInclude(au => au.UnitCategory)
+                .Where(a => attributeIds.Contains(a.Id))
+                .ToListAsync();
+
+            return Result<IEnumerable<Domain.Entities.Attribute>>.Success(attributes);
+        }
+
+        public async Task<Result<IEnumerable<Domain.Entities.Attribute>>> GetAllAttributesWithEntities()
+        {
+            var attributes = await _dbContext.Attributes
+                .Include(a => a.AttributeCategory)
+                .Include(a => a.AttributeUnit)
+                .ThenInclude(au => au.AttributeValueType)
+                .Include(a => a.AttributeUnit)
+                .ThenInclude(au => au.UnitCategory)
+                .ToListAsync();
+
+            return Result<IEnumerable<Domain.Entities.Attribute>>.Success(attributes);
+        }
+
         private async Task<bool> IsAttributeExistByNameAsync(string name)
         {
             return await _dbContext.Attributes.AnyAsync(a => a.Name == name);

@@ -146,9 +146,9 @@ public partial class SiceDbContext : DbContext
 
             entity.ToTable("attribute_unit");
 
-            entity.HasIndex(e => e.Name, "attribute_unit_name_key").IsUnique();
+            entity.HasIndex(e => e.Name, "attribute_unit_name_key");
 
-            entity.HasIndex(e => e.Symbol, "attribute_unit_symbol_key").IsUnique();
+            entity.HasIndex(e => e.Symbol, "attribute_unit_symbol_key");
 
             entity.HasIndex(e => e.AttributeValueTypeId, "idx_attribute_unit_attribute_value_type_id");
 
